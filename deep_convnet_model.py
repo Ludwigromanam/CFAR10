@@ -35,6 +35,7 @@ def initial_model_session(graph,
       batch_data = train_dataset[offset:(offset + batch_size), :, :, :]
       batch_labels = train_labels[offset:(offset + batch_size), :]
       feed_dict = {tf_train_dataset: batch_data, tf_train_labels: batch_labels,
+                   conv_dprob: 0.5,
                    hidden_dprob: 0.7}
       _, l, lr, predictions = session.run([optimizer, loss, learning_rate, train_prediction], feed_dict=feed_dict)
       if (step % 100 == 0 and step != 0):
@@ -70,6 +71,7 @@ def refine_model_session(graph,
       batch_data = train_dataset[offset:(offset + batch_size), :, :, :]
       batch_labels = train_labels[offset:(offset + batch_size), :]
       feed_dict = {tf_train_dataset: batch_data, tf_train_labels: batch_labels,
+                   conv_dprob: 0.5,
                    hidden_dprob: 0.7}
       _, l, lr, predictions = session.run([optimizer, loss, learning_rate, train_prediction], feed_dict=feed_dict)
       if (step % 100 == 0):
@@ -98,10 +100,11 @@ image_size = 32
 num_labels = 10
 num_channels = 3 # grayscale
 batch_size = 100
-patch_size = 5
-depth = 64
-layer1 = 384
-layer2 = 192
+patch_size = 3
+depth1 = 64
+depth2 = 64
+depth3 = 384
+depth4 = 192
 
 train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels = get_cfar10_data()
 
@@ -114,50 +117,84 @@ with graph.as_default():
   tf_train_labels = tf.placeholder(tf.float32, shape=(batch_size, num_labels))
   tf_valid_dataset = tf.placeholder(tf.float32, shape=(batch_size, image_size, image_size, num_channels))
   tf_test_dataset = tf.placeholder(tf.float32, shape=(batch_size, image_size, image_size, num_channels))
+  conv_dprob = tf.placeholder('float')
   hidden_dprob = tf.placeholder('float')
 
   # Variables.
-  w1 = tf.Variable(tf.truncated_normal([patch_size, patch_size, num_channels, depth], stddev=0.1))
-  b1 = tf.Variable(tf.zeros([depth]))
-  w2 = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth, depth], stddev=0.1))
-  b2 = tf.Variable(tf.constant(1.0, shape=[depth]))
-  w3 = tf.Variable(tf.truncated_normal([image_size / (2 * 2) * image_size / (2 * 2) * depth, layer1], stddev=0.1))
-  b3 = tf.Variable(tf.constant(1.0, shape=[layer1]))
-  w4 = tf.Variable(tf.truncated_normal([layer1, layer2], stddev=0.1))
-  b4 = tf.Variable(tf.constant(1.0, shape=[layer2]))
-  w5 = tf.Variable(tf.truncated_normal([layer2, num_labels], stddev=0.1))
-  b5 = tf.Variable(tf.constant(1.0, shape=[num_labels]))
+  conv1_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, num_channels, depth1], stddev=0.1))
+  conv1_bias = tf.Variable(tf.zeros([depth1]))
+  conv2_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth1, depth1], stddev=0.1))
+  conv2_bias = tf.Variable(tf.constant(1.0, shape=[depth1]))
+
+  conv3_weight = tf.Variable(tf.truncated_normal([image_size/2, image_size/2, depth1, depth2], stddev=0.1))
+  conv3_bias = tf.Variable(tf.constant(1.0, shape=[depth2]))
+  conv4_weight = tf.Variable(tf.truncated_normal([image_size/2, image_size/2, depth2, depth2], stddev=0.1))
+  conv4_bias = tf.Variable(tf.constant(1.0, shape=[depth2]))
+
+  conv5_weight = tf.Variable(tf.truncated_normal([image_size/(2*2), image_size/(2*2), depth2, depth3], stddev=0.1))
+  conv5_bias = tf.Variable(tf.constant(1.0, shape=[1, 1, depth3]))
+  conv6_weight = tf.Variable(tf.truncated_normal([1, 1, depth3, depth4], stddev=0.1))
+  conv6_bias = tf.Variable(tf.constant(1.0, shape=[1, 1, depth4]))
+
+  conv7_weight = tf.Variable(tf.truncated_normal([1, 1, depth4, num_labels], stddev=0.1))
+  conv7_bias = tf.Variable(tf.constant(1.0, shape=[1, 1, num_labels]))
 
   # Model.
   def train_model(data):
-    conv = tf.nn.conv2d(data, w1, [1, 1, 1, 1], padding='SAME')
-    relu = tf.nn.relu(conv + b1)
-    pool = tf.nn.max_pool(relu, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
-    conv = tf.nn.conv2d(pool, w2, [1, 1, 1, 1], padding='SAME')
-    relu = tf.nn.relu(conv + b2)
-    pool = tf.nn.max_pool(relu, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
-    shape = pool.get_shape().as_list()
-    print shape[0], shape[1], shape[2], shape[3]
-    reshape = tf.reshape(pool, [shape[0], shape[1] * shape[2] * shape[3]])
-    print reshape.get_shape().as_list()
-    hidden = tf.nn.relu(tf.matmul(reshape, w3) + b3)
-    hidden_dropout = tf.nn.dropout(hidden, hidden_dprob)
-    hidden2 = tf.nn.relu(tf.matmul(hidden_dropout, w4) + b4)
-    hidden2_dropout = tf.nn.dropout(hidden2, hidden_dprob)
-    return tf.matmul(hidden2_dropout, w5) + b5
+    conv1 = tf.nn.conv2d(data, conv1_weight, [1, 1, 1, 1], padding='SAME')
+    relu1 = tf.nn.relu(conv1 + conv1_bias)
+    print relu1.get_shape().as_list()
+    conv2 = tf.nn.conv2d(relu1, conv2_weight, [1, 1, 1, 1], padding='SAME')
+    relu2 = tf.nn.relu(conv2 + conv2_bias)
+    print relu2.get_shape().as_list()
+    pool1 = tf.nn.max_pool(relu2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+    print pool1.get_shape().as_list()
+
+    conv3 = tf.nn.conv2d(pool1, conv3_weight, [1, 1, 1, 1], padding='SAME')
+    relu3 = tf.nn.relu(conv3 + conv3_bias)
+    print relu3.get_shape().as_list()
+    conv4 = tf.nn.conv2d(relu3, conv4_weight, [1, 1, 1, 1], padding='SAME')
+    relu4 = tf.nn.relu(conv4 + conv4_bias)
+    print relu4.get_shape().as_list()
+    pool2 = tf.nn.max_pool(relu4, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    print pool2.get_shape().as_list()
+
+    hidden_conv1 = tf.nn.conv2d(pool2, conv5_weight, [1, 1, 1, 1], padding='VALID')
+    hidden_relu1 = tf.nn.relu(hidden_conv1 + conv5_bias)
+    hidden_relu1_dropout = tf.nn.dropout(hidden_relu1, hidden_dprob)
+    print hidden_relu1.get_shape().as_list()
+    hidden_conv2 = tf.nn.conv2d(hidden_relu1_dropout, conv6_weight, [1, 1, 1, 1], padding='VALID')
+    hidden_relu2 = tf.nn.relu(hidden_conv2 + conv6_bias)
+    hidden_relu2_dropout = tf.nn.dropout(hidden_relu2, hidden_dprob)
+    print hidden_relu2.get_shape().as_list()
+
+    output = tf.nn.conv2d(hidden_relu2_dropout, conv7_weight, [1, 1, 1, 1], padding='VALID')
+    print output.get_shape().as_list()
+    output = tf.reshape(output + conv7_bias, [-1, num_labels])
+    print output.get_shape().as_list()
+    return output
 
   def test_model(data):
-    conv = tf.nn.conv2d(data, w1, [1, 1, 1, 1], padding='SAME')
-    relu = tf.nn.relu(conv + b1)
-    pool = tf.nn.max_pool(relu, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
-    conv = tf.nn.conv2d(pool, w2, [1, 1, 1, 1], padding='SAME')
-    relu = tf.nn.relu(conv + b2)
-    pool = tf.nn.max_pool(relu, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
-    shape = pool.get_shape().as_list()
-    reshape = tf.reshape(pool, [shape[0], shape[1] * shape[2] * shape[3]])
-    hidden = tf.nn.relu(tf.matmul(reshape, w3) + b3)
-    hidden2 = tf.nn.relu(tf.matmul(hidden, w4) + b4)
-    return tf.matmul(hidden2, w5) + b5
+    conv1 = tf.nn.conv2d(data, conv1_weight, [1, 1, 1, 1], padding='SAME')
+    relu1 = tf.nn.relu(conv1 + conv1_bias)
+    conv2 = tf.nn.conv2d(relu1, conv2_weight, [1, 1, 1, 1], padding='SAME')
+    relu2 = tf.nn.relu(conv2 + conv2_bias)
+    pool1 = tf.nn.max_pool(relu2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+
+    conv3 = tf.nn.conv2d(pool1, conv3_weight, [1, 1, 1, 1], padding='SAME')
+    relu3 = tf.nn.relu(conv3 + conv3_bias)
+    conv4 = tf.nn.conv2d(relu3, conv4_weight, [1, 1, 1, 1], padding='SAME')
+    relu4 = tf.nn.relu(conv4 + conv4_bias)
+    pool2 = tf.nn.max_pool(relu4, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+
+    hidden_conv1 = tf.nn.conv2d(pool2, conv5_weight, [1, 1, 1, 1], padding='VALID')
+    hidden_relu1 = tf.nn.relu(hidden_conv1 + conv5_bias)
+    hidden_conv2 = tf.nn.conv2d(hidden_relu1, conv6_weight, [1, 1, 1, 1], padding='VALID')
+    hidden_relu2 = tf.nn.relu(hidden_conv2 + conv6_bias)
+
+    output = tf.nn.conv2d(hidden_relu2, conv7_weight, [1, 1, 1, 1], padding='VALID')
+    output = tf.reshape(output + conv7_bias, [-1, num_labels])
+    return output
 
 
   # Training computation.
@@ -167,7 +204,7 @@ with graph.as_default():
   #               tf.nn.l2_loss(w4) + tf.nn.l2_loss(b4))
 
   global_step = tf.Variable(0)
-  learning_rate = tf.train.exponential_decay(0.05,
+  learning_rate = tf.train.exponential_decay(0.000001,
                                             global_step * batch_size,
                                             train_labels.shape[0] * 5,
                                             0.95,
