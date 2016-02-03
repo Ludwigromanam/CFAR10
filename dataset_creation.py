@@ -103,10 +103,6 @@ def create_cfar10_data():
     print "Test Dataset Dimensions:"
     print np.shape(test_dataset), np.shape(test_labels)
 
-    test_img = train_dataset[1000, :, :, :]
-
-    plt.imshow(test_img)
-
     train_dataset = mean_center(train_dataset)
     valid_dataset = mean_center(valid_dataset)
     test_dataset = mean_center(test_dataset)
