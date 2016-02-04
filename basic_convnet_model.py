@@ -49,7 +49,7 @@ def initial_model_session(graph,
                                                                   tensorflow_function=valid_prediction)
       if (step % 1000 == 0 and step != 0):
         # Save the variables to disk.
-        save_path = saver.save(session, "./model2.ckpt")
+        save_path = saver.save(session, "./model.ckpt")
         print "Model saved in file: ", save_path
 
     print "===================================="
@@ -97,7 +97,7 @@ def refine_model_session(graph,
 image_size = 32
 num_labels = 10
 num_channels = 3 # grayscale
-batch_size = 100
+batch_size = 200
 patch_size = 5
 depth = 64
 layer1 = 384
@@ -132,10 +132,12 @@ with graph.as_default():
   def train_model(data):
     conv = tf.nn.conv2d(data, w1, [1, 1, 1, 1], padding='SAME')
     relu = tf.nn.relu(conv + b1)
-    pool = tf.nn.max_pool(relu, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+    relu_dropout = tf.nn.dropout(relu, hidden_dprob)
+    pool = tf.nn.max_pool(relu_dropout, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
     conv = tf.nn.conv2d(pool, w2, [1, 1, 1, 1], padding='SAME')
     relu = tf.nn.relu(conv + b2)
-    pool = tf.nn.max_pool(relu, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    relu_dropout = tf.nn.dropout(relu, hidden_dprob)
+    pool = tf.nn.max_pool(relu_dropout, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
     shape = pool.get_shape().as_list()
     print shape[0], shape[1], shape[2], shape[3]
     reshape = tf.reshape(pool, [shape[0], shape[1] * shape[2] * shape[3]])
@@ -170,7 +172,7 @@ with graph.as_default():
   learning_rate = tf.train.exponential_decay(0.05,
                                             global_step * batch_size,
                                             train_labels.shape[0] * 5,
-                                            0.95,
+                                            0.98,
                                             staircase=True)
   # Optimizer.
   optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
@@ -184,6 +186,6 @@ with graph.as_default():
   test_prediction = tf.nn.softmax(test_model(tf_test_dataset))
 
 
-num_epochs = 30
+num_epochs = 200
 initial_model_session(graph=graph, num_epochs=num_epochs, batch_size=batch_size, train_dataset=train_dataset,
                      train_labels=train_labels)

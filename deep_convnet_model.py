@@ -35,7 +35,7 @@ def initial_model_session(graph,
       batch_data = train_dataset[offset:(offset + batch_size), :, :, :]
       batch_labels = train_labels[offset:(offset + batch_size), :]
       feed_dict = {tf_train_dataset: batch_data, tf_train_labels: batch_labels,
-                   conv_dprob: 0.5,
+                   conv_dprob: 0.7,
                    hidden_dprob: 0.7}
       _, l, lr, predictions = session.run([optimizer, loss, learning_rate, train_prediction], feed_dict=feed_dict)
       if (step % 100 == 0 and step != 0):
@@ -64,14 +64,14 @@ def refine_model_session(graph,
                           num_epochs, batch_size,
                           train_dataset, train_labels):
   with tf.Session(graph=graph) as session:
-    saver.restore(session, './model.ckpt')
+    saver.restore(session, './model2.ckpt')
     print "Model Restored"
     for step in xrange(int(num_epochs * (train_labels.shape[0]/batch_size)) + 1):
       offset = (step * batch_size) % (train_labels.shape[0] - batch_size)
       batch_data = train_dataset[offset:(offset + batch_size), :, :, :]
       batch_labels = train_labels[offset:(offset + batch_size), :]
       feed_dict = {tf_train_dataset: batch_data, tf_train_labels: batch_labels,
-                   conv_dprob: 0.5,
+                   conv_dprob: 0.7,
                    hidden_dprob: 0.7}
       _, l, lr, predictions = session.run([optimizer, loss, learning_rate, train_prediction], feed_dict=feed_dict)
       if (step % 100 == 0):
@@ -86,7 +86,7 @@ def refine_model_session(graph,
                                                                   tensorflow_function=valid_prediction)
       if (step % 1000 == 0):
         # Save the variables to disk.
-        save_path = saver.save(session, "./model_refine.ckpt")
+        save_path = saver.save(session, "./model2_refine.ckpt")
         print "Model saved in file: ", save_path
 
     print "===================================="
@@ -99,10 +99,10 @@ def refine_model_session(graph,
 image_size = 32
 num_labels = 10
 num_channels = 3 # grayscale
-batch_size = 100
+batch_size = 200
 patch_size = 3
 depth1 = 64
-depth2 = 64
+depth2 = 128
 depth3 = 384
 depth4 = 192
 
@@ -143,20 +143,24 @@ with graph.as_default():
   def train_model(data):
     conv1 = tf.nn.conv2d(data, conv1_weight, [1, 1, 1, 1], padding='SAME')
     relu1 = tf.nn.relu(conv1 + conv1_bias)
+    relu1_dropout = tf.nn.dropout(relu1, conv_dprob)
     print relu1.get_shape().as_list()
-    conv2 = tf.nn.conv2d(relu1, conv2_weight, [1, 1, 1, 1], padding='SAME')
+    conv2 = tf.nn.conv2d(relu1_dropout, conv2_weight, [1, 1, 1, 1], padding='SAME')
     relu2 = tf.nn.relu(conv2 + conv2_bias)
+    relu2_dropout = tf.nn.dropout(relu2, conv_dprob)
     print relu2.get_shape().as_list()
-    pool1 = tf.nn.max_pool(relu2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+    pool1 = tf.nn.max_pool(relu2_dropout, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
     print pool1.get_shape().as_list()
 
     conv3 = tf.nn.conv2d(pool1, conv3_weight, [1, 1, 1, 1], padding='SAME')
     relu3 = tf.nn.relu(conv3 + conv3_bias)
+    relu3_dropout = tf.nn.dropout(relu3, conv_dprob)
     print relu3.get_shape().as_list()
-    conv4 = tf.nn.conv2d(relu3, conv4_weight, [1, 1, 1, 1], padding='SAME')
+    conv4 = tf.nn.conv2d(relu3_dropout, conv4_weight, [1, 1, 1, 1], padding='SAME')
     relu4 = tf.nn.relu(conv4 + conv4_bias)
+    relu4_dropout = tf.nn.dropout(conv4, conv_dprob)
     print relu4.get_shape().as_list()
-    pool2 = tf.nn.max_pool(relu4, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    pool2 = tf.nn.max_pool(relu4_dropout, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
     print pool2.get_shape().as_list()
 
     hidden_conv1 = tf.nn.conv2d(pool2, conv5_weight, [1, 1, 1, 1], padding='VALID')
@@ -204,7 +208,7 @@ with graph.as_default():
   #               tf.nn.l2_loss(w4) + tf.nn.l2_loss(b4))
 
   global_step = tf.Variable(0)
-  learning_rate = tf.train.exponential_decay(0.000001,
+  learning_rate = tf.train.exponential_decay(0.0005,
                                             global_step * batch_size,
                                             train_labels.shape[0] * 5,
                                             0.95,
@@ -221,6 +225,6 @@ with graph.as_default():
   test_prediction = tf.nn.softmax(test_model(tf_test_dataset))
 
 
-num_epochs = 30
+num_epochs = 300
 initial_model_session(graph=graph, num_epochs=num_epochs, batch_size=batch_size, train_dataset=train_dataset,
                      train_labels=train_labels)
