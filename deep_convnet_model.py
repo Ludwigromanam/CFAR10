@@ -210,8 +210,8 @@ with graph.as_default():
   global_step = tf.Variable(0)
   learning_rate = tf.train.exponential_decay(0.0005,
                                             global_step * batch_size,
-                                            train_labels.shape[0] * 5,
-                                            0.95,
+                                            train_labels.shape[0] * 10,
+                                            0.99,
                                             staircase=True)
   # Optimizer.
   optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)

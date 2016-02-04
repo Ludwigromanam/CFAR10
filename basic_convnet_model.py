@@ -121,11 +121,11 @@ with graph.as_default():
   b1 = tf.Variable(tf.zeros([depth]))
   w2 = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth, depth], stddev=0.1))
   b2 = tf.Variable(tf.constant(1.0, shape=[depth]))
-  w3 = tf.Variable(tf.truncated_normal([image_size / (2 * 2) * image_size / (2 * 2) * depth, layer1], stddev=0.1))
+  w3 = tf.Variable(tf.truncated_normal([image_size/(2*2), image_size/(2*2), depth, layer1], stddev=0.1))
   b3 = tf.Variable(tf.constant(1.0, shape=[layer1]))
-  w4 = tf.Variable(tf.truncated_normal([layer1, layer2], stddev=0.1))
+  w4 = tf.Variable(tf.truncated_normal([1, 1, layer1, layer2], stddev=0.1))
   b4 = tf.Variable(tf.constant(1.0, shape=[layer2]))
-  w5 = tf.Variable(tf.truncated_normal([layer2, num_labels], stddev=0.1))
+  w5 = tf.Variable(tf.truncated_normal([1, 1, layer2, num_labels], stddev=0.1))
   b5 = tf.Variable(tf.constant(1.0, shape=[num_labels]))
 
   # Model.
@@ -138,15 +138,12 @@ with graph.as_default():
     relu = tf.nn.relu(conv + b2)
     relu_dropout = tf.nn.dropout(relu, hidden_dprob)
     pool = tf.nn.max_pool(relu_dropout, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
-    shape = pool.get_shape().as_list()
-    print shape[0], shape[1], shape[2], shape[3]
-    reshape = tf.reshape(pool, [shape[0], shape[1] * shape[2] * shape[3]])
-    print reshape.get_shape().as_list()
-    hidden = tf.nn.relu(tf.matmul(reshape, w3) + b3)
+    hidden = tf.nn.relu(tf.conv2d(pool, w3, [1, 1, 1, 1], padding='VALID') + b3)
     hidden_dropout = tf.nn.dropout(hidden, hidden_dprob)
-    hidden2 = tf.nn.relu(tf.matmul(hidden_dropout, w4) + b4)
+    hidden2 = tf.nn.relu(tf.conv2d(hidden_dropout, w4, [1, 1, 1, 1], padding='VALID') + b4)
     hidden2_dropout = tf.nn.dropout(hidden2, hidden_dprob)
-    return tf.matmul(hidden2_dropout, w5) + b5
+    output = tf.nn.conv2d(hidden2_dropout, w5, [1, 1, 1, 1], padding='VALID') + b5
+    return tf.reshape(output, [-1, num_labels])
 
   def test_model(data):
     conv = tf.nn.conv2d(data, w1, [1, 1, 1, 1], padding='SAME')
@@ -155,11 +152,10 @@ with graph.as_default():
     conv = tf.nn.conv2d(pool, w2, [1, 1, 1, 1], padding='SAME')
     relu = tf.nn.relu(conv + b2)
     pool = tf.nn.max_pool(relu, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
-    shape = pool.get_shape().as_list()
-    reshape = tf.reshape(pool, [shape[0], shape[1] * shape[2] * shape[3]])
-    hidden = tf.nn.relu(tf.matmul(reshape, w3) + b3)
-    hidden2 = tf.nn.relu(tf.matmul(hidden, w4) + b4)
-    return tf.matmul(hidden2, w5) + b5
+    hidden = tf.nn.relu(tf.conv2d(pool, w3, [1, 1, 1, 1], padding='VALID') + b3)
+    hidden2 = tf.nn.relu(tf.conv2d(hidden, w4, [1, 1, 1, 1], padding='VALID') + b4)
+    output = tf.nn.conv2d(hidden2, w5, [1, 1, 1, 1], padding='VALID') + b5
+    return tf.reshape(output, [-1, num_labels])
 
 
   # Training computation.
@@ -171,8 +167,8 @@ with graph.as_default():
   global_step = tf.Variable(0)
   learning_rate = tf.train.exponential_decay(0.05,
                                             global_step * batch_size,
-                                            train_labels.shape[0] * 5,
-                                            0.98,
+                                            train_labels.shape[0] * 10,
+                                            0.99,
                                             staircase=True)
   # Optimizer.
   optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
@@ -186,6 +182,6 @@ with graph.as_default():
   test_prediction = tf.nn.softmax(test_model(tf_test_dataset))
 
 
-num_epochs = 200
+num_epochs = 300
 initial_model_session(graph=graph, num_epochs=num_epochs, batch_size=batch_size, train_dataset=train_dataset,
                      train_labels=train_labels)
