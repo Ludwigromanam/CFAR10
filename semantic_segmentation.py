@@ -24,44 +24,27 @@ with graph.as_default():
 
   # Variables.
   w1 = tf.Variable(tf.truncated_normal([patch_size, patch_size, num_channels, depth], stddev=0.1))
-  print w1.get_shape().as_list()
   b1 = tf.Variable(tf.zeros([depth]))
   w2 = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth, depth], stddev=0.1))
-  print w2.get_shape().as_list()
   b2 = tf.Variable(tf.constant(1.0, shape=[depth]))
-  w3 = tf.Variable(tf.truncated_normal([image_size / (2 * 2) * image_size / (2 * 2) * depth, layer1], stddev=0.1))
-  print w3.get_shape().as_list()
+  w3 = tf.Variable(tf.truncated_normal([image_size/(2*2), image_size/(2*2), depth, layer1], stddev=0.1))
   b3 = tf.Variable(tf.constant(1.0, shape=[layer1]))
-  w4 = tf.Variable(tf.truncated_normal([layer1, layer2], stddev=0.1))
-  print w4.get_shape().as_list()
+  w4 = tf.Variable(tf.truncated_normal([1, 1, layer1, layer2], stddev=0.1))
   b4 = tf.Variable(tf.constant(1.0, shape=[layer2]))
-  w5 = tf.Variable(tf.truncated_normal([layer2, num_labels], stddev=0.1))
-  print w5.get_shape().as_list()
+  w5 = tf.Variable(tf.truncated_normal([1, 1, layer2, num_labels], stddev=0.1))
   b5 = tf.Variable(tf.constant(1.0, shape=[num_labels]))
 
   def test_model(data):
     conv = tf.nn.conv2d(data, w1, [1, 1, 1, 1], padding='SAME')
-    print conv.get_shape().as_list()
     relu = tf.nn.relu(conv + b1)
     pool = tf.nn.max_pool(relu, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
-    print pool.get_shape().as_list()
     conv = tf.nn.conv2d(pool, w2, [1, 1, 1, 1], padding='SAME')
-    print conv.get_shape().as_list()
     relu = tf.nn.relu(conv + b2)
     pool = tf.nn.max_pool(relu, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
-    print pool.get_shape().as_list()
-    conv = tf.nn.conv2d(pool, tf.reshape(w3, (image_size/(2*2), image_size/(2*2), depth, layer1)),
-                        [1, 1, 1, 1], padding='VALID')
-    print conv.get_shape().as_list()
-    relu = tf.nn.relu(conv + tf.reshape(b3, (1, 1, layer1)))
-    conv = tf.nn.conv2d(relu, tf.reshape(w4, (1, 1, layer1, layer2)),
-                        [1, 1, 1, 1], padding='VALID')
-    print conv.get_shape().as_list()
-    relu = tf.nn.relu(conv + tf.reshape(b4, (1, 1, layer2)))
-    output = tf.nn.conv2d(relu, tf.reshape(w5, (1, 1, layer2, num_labels)),
-                          [1, 1, 1, 1], padding='VALID')
-    print output.get_shape().as_list()
-    return output + tf.reshape(b5, (1, 1, num_labels))
+    hidden = tf.nn.relu(tf.nn.conv2d(pool, w3, [1, 1, 1, 1], padding='VALID') + b3)
+    hidden2 = tf.nn.relu(tf.nn.conv2d(hidden, w4, [1, 1, 1, 1], padding='VALID') + b4)
+    output = tf.nn.conv2d(hidden2, w5, [1, 1, 1, 1], padding='VALID') + b5
+    return tf.reshape(output, [-1, num_labels])
 
     # shape = pool.get_shape().as_list()
     # reshape = tf.reshape(pool, [shape[0], shape[1] * shape[2] * shape[3]])
