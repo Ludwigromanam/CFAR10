@@ -138,9 +138,9 @@ with graph.as_default():
     relu = tf.nn.relu(conv + b2)
     relu_dropout = tf.nn.dropout(relu, hidden_dprob)
     pool = tf.nn.max_pool(relu_dropout, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
-    hidden = tf.nn.relu(tf.conv2d(pool, w3, [1, 1, 1, 1], padding='VALID') + b3)
+    hidden = tf.nn.relu(tf.nn.conv2d(pool, w3, [1, 1, 1, 1], padding='VALID') + b3)
     hidden_dropout = tf.nn.dropout(hidden, hidden_dprob)
-    hidden2 = tf.nn.relu(tf.conv2d(hidden_dropout, w4, [1, 1, 1, 1], padding='VALID') + b4)
+    hidden2 = tf.nn.relu(tf.nn.conv2d(hidden_dropout, w4, [1, 1, 1, 1], padding='VALID') + b4)
     hidden2_dropout = tf.nn.dropout(hidden2, hidden_dprob)
     output = tf.nn.conv2d(hidden2_dropout, w5, [1, 1, 1, 1], padding='VALID') + b5
     return tf.reshape(output, [-1, num_labels])
@@ -152,8 +152,8 @@ with graph.as_default():
     conv = tf.nn.conv2d(pool, w2, [1, 1, 1, 1], padding='SAME')
     relu = tf.nn.relu(conv + b2)
     pool = tf.nn.max_pool(relu, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
-    hidden = tf.nn.relu(tf.conv2d(pool, w3, [1, 1, 1, 1], padding='VALID') + b3)
-    hidden2 = tf.nn.relu(tf.conv2d(hidden, w4, [1, 1, 1, 1], padding='VALID') + b4)
+    hidden = tf.nn.relu(tf.nn.conv2d(pool, w3, [1, 1, 1, 1], padding='VALID') + b3)
+    hidden2 = tf.nn.relu(tf.nn.conv2d(hidden, w4, [1, 1, 1, 1], padding='VALID') + b4)
     output = tf.nn.conv2d(hidden2, w5, [1, 1, 1, 1], padding='VALID') + b5
     return tf.reshape(output, [-1, num_labels])
 
