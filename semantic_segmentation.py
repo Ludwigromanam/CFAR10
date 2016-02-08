@@ -5,7 +5,7 @@ import matplotlib.image as mpimg
 import tensorflow as tf
 from dataset_creation import get_cfar10_data, mean_center
 
-image_size = 32
+image_size = 24
 new_image_size = 64
 num_labels = 10
 num_channels = 3

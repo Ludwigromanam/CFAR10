@@ -96,7 +96,7 @@ def refine_model_session(graph,
                                                         tensorflow_function=test_prediction)
 
 
-image_size = 32
+image_size = 24
 num_labels = 10
 num_channels = 3 # grayscale
 batch_size = 200
