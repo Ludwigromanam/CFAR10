@@ -3,12 +3,12 @@ import cv2
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import tensorflow as tf
-from PIL import Image
+from dataset_creation import get_cfar10_data, mean_center
 
 image_size = 32
 new_image_size = 64
 num_labels = 10
-num_channels = 3 # grayscale
+num_channels = 3
 batch_size = 1
 patch_size = 5
 depth = 64
@@ -44,13 +44,8 @@ with graph.as_default():
     hidden = tf.nn.relu(tf.nn.conv2d(pool, w3, [1, 1, 1, 1], padding='VALID') + b3)
     hidden2 = tf.nn.relu(tf.nn.conv2d(hidden, w4, [1, 1, 1, 1], padding='VALID') + b4)
     output = tf.nn.conv2d(hidden2, w5, [1, 1, 1, 1], padding='VALID') + b5
-    return tf.reshape(output, [-1, num_labels])
-
-    # shape = pool.get_shape().as_list()
-    # reshape = tf.reshape(pool, [shape[0], shape[1] * shape[2] * shape[3]])
-    # hidden = tf.nn.relu(tf.matmul(reshape, w3) + b3)
-    # hidden2 = tf.nn.relu(tf.matmul(hidden, w4) + b4)
-    # return tf.matmul(hidden2, w5) + b5
+    output2 = tf.reshape(output, [-1, num_labels])
+    return output2
 
   train_prediction = test_model(tf_train_dataset)
 
@@ -58,32 +53,42 @@ with graph.as_default():
 def run_model_image(graph, image):
     with tf.Session(graph=graph) as session:
         tf.train.Saver().restore(session, './model.ckpt')
-        feed_dict = {tf_train_dataset : image}
+        feed_dict = {tf_train_dataset: image}
         predictions = session.run([train_prediction], feed_dict=feed_dict)
         return np.array(predictions)
 
 
 image = cv2.imread('/Users/pspitler3/Documents/caffe_images/dogsandcar.jpg')
-image = image[:, 60:60+360, :]
+image = image[30:330, 90:390, :]
 image = cv2.resize(image, (new_image_size, new_image_size), interpolation=cv2.INTER_AREA)
-cv2.imwrite('/Users/pspitler3/Documents/caffe_images/dogandcar_thumb.jpg', image)
+cv2.imwrite('/Users/pspitler3/Documents/caffe_images/dogsandcar_thumb.jpg', image)
 
 imdata = mpimg.imread('/Users/pspitler3/Documents/caffe_images/dogandcar_thumb.jpg')
 
+# train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels = get_cfar10_data()
+# imdata = train_dataset[2, :, :, :]
+# imdata = np.reshape(imdata, (image_size, image_size, 3))
+# label = train_labels[2, :]
+
+imdata = mean_center(imdata)
 imdata = imdata.reshape((1, new_image_size, new_image_size, 3))
+print np.shape(imdata)
 
 heatmap = run_model_image(graph=graph, image=imdata)
-
-heatmap = np.reshape(heatmap, (9, 9, 10))
 print np.shape(heatmap)
 
-plt.imshow(heatmap[:, :, 0]), plt.show()
-plt.imshow(heatmap[:, :, 1]), plt.show()
-plt.imshow(heatmap[:, :, 2]), plt.show()
-plt.imshow(heatmap[:, :, 3]), plt.show()
-plt.imshow(heatmap[:, :, 4]), plt.show()
-plt.imshow(heatmap[:, :, 5]), plt.show()
-plt.imshow(heatmap[:, :, 6]), plt.show()
-plt.imshow(heatmap[:, :, 7]), plt.show()
-plt.imshow(heatmap[:, :, 8]), plt.show()
-plt.imshow(heatmap[:, :, 9]), plt.show()
+heatmap = heatmap.reshape(9, 9, num_labels)
+
+# plt.imshow(heatmap[:, :, 0]), plt.show()
+# plt.imshow(heatmap[:, :, 1]), plt.show()
+# plt.imshow(heatmap[:, :, 2]), plt.show()
+# plt.imshow(heatmap[:, :, 3]), plt.show()
+# plt.imshow(heatmap[:, :, 4]), plt.show()
+# plt.imshow(heatmap[:, :, 5]), plt.show()
+# plt.imshow(heatmap[:, :, 6]), plt.show()
+# plt.imshow(heatmap[:, :, 7]), plt.show()
+# plt.imshow(heatmap[:, :, 8]), plt.show()
+# plt.imshow(heatmap[:, :, 9]), plt.show()
+
+print np.argmax(heatmap, axis=2)
+print np.max(np.round(heatmap, decimals=0), axis=2)

@@ -1,7 +1,12 @@
 import numpy as np
 import cPickle as pickle
 import tarfile
+import tensorflow as tf
 
+IN_IMAGE_HEIGHT = 32
+IN_IMAGE_WIDTH = 32
+OUT_IMAGE_HEIGHT = 24
+OUT_IMAGE_WIDTH = 24
 
 def extract(filename):
   tar = tarfile.open(filename)
@@ -23,8 +28,43 @@ def randomize(dataset, labels):
     return shuffled_dataset, shuffled_labels
 
 
-def mean_center(dataset):
-    return ((dataset - 255.0/2)/255.0).astype(np.float32)
+def test_transform(dataset):
+    new_dataset = np.empty((np.shape(dataset)[0], OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH, 3))
+    for image_index in range(0, np.shape(dataset)[0]):
+        graph = tf.Graph()
+        with graph.as_default():
+            tf_image = tf.placeholder(tf.float32, (IN_IMAGE_HEIGHT, IN_IMAGE_WIDTH, 3))
+            distorted_image = tf.image.random_crop(tf_image, [OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH])
+            distorted_image = tf.image.random_flip_left_right(distorted_image)
+            distorted_image = tf.image.random_brightness(distorted_image, max_delta=63)
+            distorted_image = tf.image.random_contrast(distorted_image, lower=0.2, upper=1.8)
+            white_image = tf.image.per_image_whitening(distorted_image)
+        with tf.Session(graph=graph):
+            image = dataset[image_index, :, :, :]
+            transformed_image = white_image.eval(feed_dict={tf_image: image})
+            new_dataset[image_index, :, :, :] = transformed_image
+            if image_index % 100 == 0:
+                print 'Now on record', image_index
+
+    return new_dataset
+
+
+def train_transform(dataset):
+    new_dataset = np.empty((np.shape(dataset)[0], OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH, 3))
+    for image_index in range(0, np.shape(dataset)[0]):
+        graph = tf.Graph()
+        with graph.as_default():
+            tf_image = tf.placeholder(tf.float32, (IN_IMAGE_HEIGHT, IN_IMAGE_WIDTH, 3))
+            distorted_image = tf.image.resize_image_with_crop_or_pad(tf_image, OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH)
+            white_image = tf.image.per_image_whitening(distorted_image)
+        with tf.Session(graph=graph):
+            image = dataset[image_index, :, :, :]
+            transformed_image = white_image.eval(feed_dict={tf_image: image})
+            new_dataset[image_index, :, :, :] = transformed_image
+            if image_index % 100 == 0:
+                print 'Now on record', image_index
+
+    return new_dataset
 
 
 def create_cfar10_data():
@@ -42,9 +82,6 @@ def create_cfar10_data():
 
     test_dataset = test_batch['data']
     test_labels = np.reshape(np.array(test_batch['labels']), (np.shape(test_dataset)[0],))
-
-    print np.shape(main_dataset)
-    print np.shape(main_labels)
 
     main_dataset, main_labels = randomize(main_dataset, main_labels)
     test_dataset, test_labels = randomize(test_dataset, test_labels)
@@ -66,22 +103,9 @@ def create_cfar10_data():
     print np.unique(test_labels)
     print np.bincount(test_labels)
 
-    print "Train Dataset Dimensions:"
-    print np.shape(train_dataset), np.shape(train_labels)
-
-    print "Valid Dataset Dimensions:"
-    print np.shape(valid_dataset), np.shape(valid_labels)
-
-    print "Test Dataset Dimensions:"
-    print np.shape(test_dataset), np.shape(test_labels)
-
     image_size = 32
     num_channels = 3
     num_labels = 10
-
-    def format_data(rgb, width=32, height=32, num_colors=3):
-       rgb = rgb.reshape(-1, num_colors, width * height).reshape(-1, num_colors, width, height)
-       return rgb.swapaxes(3, 1).swapaxes(1, 2)
 
     def reformat(dataset, labels):
       rgb = dataset.reshape(-1, num_channels, image_size * image_size).reshape(-1, num_channels, image_size, image_size)
@@ -93,18 +117,17 @@ def create_cfar10_data():
     valid_dataset, valid_labels = reformat(valid_dataset, valid_labels)
     test_dataset, test_labels = reformat(test_dataset, test_labels)
 
+    train_dataset = train_transform(train_dataset)
     print "Train Dataset Dimensions:"
     print np.shape(train_dataset), np.shape(train_labels)
 
+    valid_dataset = test_transform(valid_dataset)
     print "Valid Dataset Dimensions:"
     print np.shape(valid_dataset), np.shape(valid_labels)
 
+    test_dataset = test_transform(test_dataset)
     print "Test Dataset Dimensions:"
     print np.shape(test_dataset), np.shape(test_labels)
-
-    train_dataset = mean_center(train_dataset)
-    valid_dataset = mean_center(valid_dataset)
-    test_dataset = mean_center(test_dataset)
 
     pickle_file = 'CFAR10.pickle'
 
@@ -139,3 +162,6 @@ def get_cfar10_data():
         del save
 
     return train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels
+
+
+create_cfar10_data()
