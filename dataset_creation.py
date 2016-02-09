@@ -28,7 +28,7 @@ def randomize(dataset, labels):
     return shuffled_dataset, shuffled_labels
 
 
-def test_transform(dataset):
+def train_transform(dataset):
     new_dataset = np.empty((np.shape(dataset)[0], OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH, 3))
     for image_index in range(0, np.shape(dataset)[0]):
         graph = tf.Graph()
@@ -49,7 +49,7 @@ def test_transform(dataset):
     return new_dataset
 
 
-def train_transform(dataset):
+def test_transform(dataset):
     new_dataset = np.empty((np.shape(dataset)[0], OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH, 3))
     for image_index in range(0, np.shape(dataset)[0]):
         graph = tf.Graph()
@@ -162,6 +162,3 @@ def get_cfar10_data():
         del save
 
     return train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels
-
-
-create_cfar10_data()
