@@ -9,9 +9,7 @@ def accuracy(predictions, labels):
 
 
 def batch_accuracy_test(session, batch_size, dataset, labels, tensorflow_dataset, tensorflow_function):
-
   accurate_labels = 0.0
-
   for step in xrange(int(labels.shape[0]/batch_size)):
     offset = (step * batch_size) % (labels.shape[0] - batch_size)
     batch_data = dataset[offset:(offset + batch_size), :, :, :]
@@ -20,21 +18,29 @@ def batch_accuracy_test(session, batch_size, dataset, labels, tensorflow_dataset
     predictions = session.run([tensorflow_function], feed_dict=feed_dict)
     predictions = np.reshape(np.array(predictions), (batch_size, labels.shape[1]))
     accurate_labels += np.sum(np.argmax(predictions, 1) == np.argmax(batch_labels, 1))
-
   return (100.0 * accurate_labels)/labels.shape[0]
 
 
-def initial_model_session(graph,
+def initial_model_session(graph, train_graph,
                           num_epochs, batch_size,
-                          train_dataset, train_labels):
+                          train_dataset, train_labels,
+                          valid_dataset, valid_labels):
   with tf.Session(graph=graph) as session:
     tf.initialize_all_variables().run()
     print "Initialized"
     for step in xrange(int(num_epochs * (train_labels.shape[0]/batch_size)) + 1):
       offset = (step * batch_size) % (train_labels.shape[0] - batch_size)
       batch_data = train_dataset[offset:(offset + batch_size), :, :, :]
+
+      new_dataset = np.empty((np.shape(batch_data)[0], OUT_IMAGE_SIZE, OUT_IMAGE_SIZE, 3))
+      for image_index in range(0, np.shape(batch_data)[0]):
+        with tf.Session(graph=train_graph):
+            image = batch_data[image_index, :, :, :]
+            transformed_image = white_image.eval(feed_dict={tf_image: image})
+            new_dataset[image_index, :, :, :] = transformed_image
+
       batch_labels = train_labels[offset:(offset + batch_size), :]
-      feed_dict = {tf_train_dataset: batch_data, tf_train_labels: batch_labels,
+      feed_dict = {tf_train_dataset: new_dataset, tf_train_labels: batch_labels,
                    hidden_dprob: 0.7}
       _, l, lr, predictions = session.run([optimizer, loss, learning_rate, train_prediction], feed_dict=feed_dict)
       if (step % 100 == 0 and step != 0):
@@ -94,9 +100,11 @@ def refine_model_session(graph,
                                                         tensorflow_function=test_prediction)
 
 
-image_size = 24
+
+IN_IMAGE_SIZE = 32
+OUT_IMAGE_SIZE = 24
 num_labels = 10
-num_channels = 3 # grayscale
+num_channels = 3
 batch_size = 200
 patch_size = 5
 depth = 64
@@ -105,15 +113,25 @@ layer2 = 192
 
 train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels = get_cfar10_data()
 
-graph = tf.Graph()
 
+train_graph = tf.Graph()
+with train_graph.as_default():
+  tf_image = tf.placeholder(tf.float32, (IN_IMAGE_SIZE, IN_IMAGE_SIZE, 3))
+  distorted_image = tf.image.random_crop(tf_image, [OUT_IMAGE_SIZE, OUT_IMAGE_SIZE])
+  distorted_image = tf.image.random_flip_left_right(distorted_image)
+  distorted_image = tf.image.random_brightness(distorted_image, max_delta=63)
+  distorted_image = tf.image.random_contrast(distorted_image, lower=0.2, upper=1.8)
+  white_image = tf.image.per_image_whitening(distorted_image)
+
+
+graph = tf.Graph()
 with graph.as_default():
 
   # Input data.
-  tf_train_dataset = tf.placeholder(tf.float32, shape=(batch_size, image_size, image_size, num_channels))
+  tf_train_dataset = tf.placeholder(tf.float32, shape=(batch_size, OUT_IMAGE_SIZE, OUT_IMAGE_SIZE, num_channels))
   tf_train_labels = tf.placeholder(tf.float32, shape=(batch_size, num_labels))
-  tf_valid_dataset = tf.placeholder(tf.float32, shape=(batch_size, image_size, image_size, num_channels))
-  tf_test_dataset = tf.placeholder(tf.float32, shape=(batch_size, image_size, image_size, num_channels))
+  tf_valid_dataset = tf.placeholder(tf.float32, shape=(batch_size, OUT_IMAGE_SIZE, OUT_IMAGE_SIZE, num_channels))
+  tf_test_dataset = tf.placeholder(tf.float32, shape=(batch_size, OUT_IMAGE_SIZE, OUT_IMAGE_SIZE, num_channels))
   hidden_dprob = tf.placeholder('float')
 
   # Variables.
@@ -121,7 +139,7 @@ with graph.as_default():
   b1 = tf.Variable(tf.zeros([depth]))
   w2 = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth, depth], stddev=0.1))
   b2 = tf.Variable(tf.constant(1.0, shape=[depth]))
-  w3 = tf.Variable(tf.truncated_normal([image_size/(2*2), image_size/(2*2), depth, layer1], stddev=0.1))
+  w3 = tf.Variable(tf.truncated_normal([OUT_IMAGE_SIZE/(2*2), OUT_IMAGE_SIZE/(2*2), depth, layer1], stddev=0.1))
   b3 = tf.Variable(tf.constant(1.0, shape=[layer1]))
   w4 = tf.Variable(tf.truncated_normal([1, 1, layer1, layer2], stddev=0.1))
   b4 = tf.Variable(tf.constant(1.0, shape=[layer2]))
@@ -169,7 +187,7 @@ with graph.as_default():
   #               tf.nn.l2_loss(w4) + tf.nn.l2_loss(b4))
 
   global_step = tf.Variable(0)
-  learning_rate = tf.train.exponential_decay(0.05,
+  learning_rate = tf.train.exponential_decay(0.025,
                                             global_step * batch_size,
                                             train_labels.shape[0] * 10,
                                             0.99,
@@ -187,5 +205,8 @@ with graph.as_default():
 
 
 num_epochs = 300
-initial_model_session(graph=graph, num_epochs=num_epochs, batch_size=batch_size, train_dataset=train_dataset,
-                     train_labels=train_labels)
+initial_model_session(graph=graph, train_graph=train_graph,
+                      num_epochs=num_epochs,
+                      batch_size=batch_size,
+                      train_dataset=train_dataset, train_labels=train_labels,
+                      valid_dataset=valid_dataset, valid_labels=valid_labels)

@@ -29,17 +29,17 @@ def randomize(dataset, labels):
 
 
 def train_transform(dataset):
-    new_dataset = np.empty((np.shape(dataset)[0], OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH, 3))
-    for image_index in range(0, np.shape(dataset)[0]):
-        graph = tf.Graph()
-        with graph.as_default():
+    train_graph = tf.Graph()
+    with train_graph.as_default():
             tf_image = tf.placeholder(tf.float32, (IN_IMAGE_HEIGHT, IN_IMAGE_WIDTH, 3))
             distorted_image = tf.image.random_crop(tf_image, [OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH])
             distorted_image = tf.image.random_flip_left_right(distorted_image)
             distorted_image = tf.image.random_brightness(distorted_image, max_delta=63)
             distorted_image = tf.image.random_contrast(distorted_image, lower=0.2, upper=1.8)
             white_image = tf.image.per_image_whitening(distorted_image)
-        with tf.Session(graph=graph):
+    new_dataset = np.empty((np.shape(dataset)[0], OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH, 3))
+    for image_index in range(0, np.shape(dataset)[0]):
+        with tf.Session(graph=train_graph):
             image = dataset[image_index, :, :, :]
             transformed_image = white_image.eval(feed_dict={tf_image: image})
             new_dataset[image_index, :, :, :] = transformed_image
@@ -50,14 +50,14 @@ def train_transform(dataset):
 
 
 def test_transform(dataset):
+    test_graph = tf.Graph()
+    with test_graph.as_default():
+        tf_image = tf.placeholder(tf.float32, (IN_IMAGE_HEIGHT, IN_IMAGE_WIDTH, 3))
+        distorted_image = tf.image.resize_image_with_crop_or_pad(tf_image, OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH)
+        white_image = tf.image.per_image_whitening(distorted_image)
     new_dataset = np.empty((np.shape(dataset)[0], OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH, 3))
     for image_index in range(0, np.shape(dataset)[0]):
-        graph = tf.Graph()
-        with graph.as_default():
-            tf_image = tf.placeholder(tf.float32, (IN_IMAGE_HEIGHT, IN_IMAGE_WIDTH, 3))
-            distorted_image = tf.image.resize_image_with_crop_or_pad(tf_image, OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH)
-            white_image = tf.image.per_image_whitening(distorted_image)
-        with tf.Session(graph=graph):
+        with tf.Session(graph=test_graph):
             image = dataset[image_index, :, :, :]
             transformed_image = white_image.eval(feed_dict={tf_image: image})
             new_dataset[image_index, :, :, :] = transformed_image
@@ -117,15 +117,15 @@ def create_cfar10_data():
     valid_dataset, valid_labels = reformat(valid_dataset, valid_labels)
     test_dataset, test_labels = reformat(test_dataset, test_labels)
 
-    train_dataset = train_transform(train_dataset)
+    valid_dataset = test_transform(valid_dataset)
+    test_dataset = test_transform(test_dataset)
+
     print "Train Dataset Dimensions:"
     print np.shape(train_dataset), np.shape(train_labels)
 
-    valid_dataset = test_transform(valid_dataset)
     print "Valid Dataset Dimensions:"
     print np.shape(valid_dataset), np.shape(valid_labels)
 
-    test_dataset = test_transform(test_dataset)
     print "Test Dataset Dimensions:"
     print np.shape(test_dataset), np.shape(test_labels)
 
