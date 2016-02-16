@@ -13,7 +13,7 @@ num_labels = 10
 batch_size = 100
 num_channels = 3
 
-tf.app.flags.DEFINE_integer('num_epochs', 1, 'The number of validations records')
+tf.app.flags.DEFINE_integer('num_epochs', 200, 'The number of validations records')
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -157,6 +157,7 @@ def run_training():
         print "Current epoch: ", (float(step) * batch_size) / FLAGS.train_records
         print "Current learning rate: ", lr
         print "Minibatch loss at step", step, ":", loss_value
+      if step % 1000 == 0 or step == int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size) - 1:
         save_path = saver.save(sess, "./model.ckpt")
         print "Model saved in file: ", save_path
         print "Validation accuracy: ", evaluate('valid.tfrecords')

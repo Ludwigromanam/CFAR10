@@ -19,7 +19,7 @@ def distorted_inputs(num_epochs):
     min_queue = FLAGS.train_records * 0.4
 
     distorted_image = tf.image.random_crop(result.image, [FLAGS.output_image_size, FLAGS.output_image_size])
-    #distorted_image = tf.image.random_crop(result.image, [FLAGS.output_image_size, FLAGS.output_image_size,
+    #distorted_image = tf.random_crop(result.image, [FLAGS.output_image_size, FLAGS.output_image_size,
     #                                                      FLAGS.input_image_channels])
     distorted_image = tf.image.random_flip_left_right(distorted_image)
     distorted_image = tf.image.random_brightness(distorted_image, max_delta=63)
