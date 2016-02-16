@@ -37,21 +37,15 @@ def evaluate(test_set):
       tf.train.start_queue_runners(sess=sess)
       saver.restore(sess=sess, save_path='model.ckpt')
 
-      try:
-        step = 0
-        true_count = 0
-        if test_set == 'valid.tfrecords':
-          num_records = FLAGS.valid_records
-        else:
-          num_records = FLAGS.test_records
-        while step <= num_records/FLAGS.batch_size:
-          acc = sess.run(test_acc)
-          true_count += np.sum(acc)
-          step += 1
+      true_count = 0
+      if test_set == 'valid.tfrecords':
+        num_records = FLAGS.valid_records
+      else:
+        num_records = FLAGS.test_records
 
-      except tf.errors.OutOfRangeError:
-        print 'Issues'
-
+      for step in xrange(num_records/FLAGS.batch_size):
+        acc = sess.run(test_acc)
+        true_count += np.sum(acc)
 
       return 100 * (float(true_count)/num_records)
 
@@ -157,7 +151,7 @@ def run_training():
         print "Current epoch: ", (float(step) * batch_size) / FLAGS.train_records
         print "Current learning rate: ", lr
         print "Minibatch loss at step", step, ":", loss_value
-      if step % 1000 == 0 or step == int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size) - 1:
+      if step % 900 == 0 or step == int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size) - 1:
         save_path = saver.save(sess, "./model.ckpt")
         print "Model saved in file: ", save_path
         print "Validation accuracy: ", evaluate('valid.tfrecords')
