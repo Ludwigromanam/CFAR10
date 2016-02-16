@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import time
 from read_data import distorted_inputs, inputs
 
 patch_size = 5
@@ -12,8 +13,7 @@ num_labels = 10
 batch_size = 100
 num_channels = 3
 
-tf.app.flags.DEFINE_integer('valid_records', 5000, 'The number of validations records')
-tf.app.flags.DEFINE_integer('test_records', 10000, 'The number of validations records')
+tf.app.flags.DEFINE_integer('num_epochs', 1, 'The number of validations records')
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -34,8 +34,7 @@ def evaluate(test_set):
       saver = tf.train.Saver(tf.all_variables())
 
       sess = tf.Session()
-      coord = tf.train.Coordinator()
-      threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+      tf.train.start_queue_runners(sess=sess)
       saver.restore(sess=sess, save_path='model.ckpt')
 
       try:
@@ -45,21 +44,16 @@ def evaluate(test_set):
           num_records = FLAGS.valid_records
         else:
           num_records = FLAGS.test_records
-        while step <= num_records/FLAGS.batch_size and not coord.should_stop():
+        while step <= num_records/FLAGS.batch_size:
           acc = sess.run(test_acc)
           true_count += np.sum(acc)
           step += 1
 
       except tf.errors.OutOfRangeError:
         print 'Issues'
-      finally:
-        #print 'Accuracy: ', 100 * (float(true_count)/FLAGS.valid_records)
-        coord.request_stop()
 
-      coord.join(threads)
-      sess.close()
 
-      return 100 * (float(true_count)/FLAGS.valid_records)
+      return 100 * (float(true_count)/num_records)
 
 
 def inference(train, images):
@@ -125,7 +119,7 @@ def training(loss, learning_rate):
   global_step = tf.Variable(0)
   learning_rate = tf.train.exponential_decay(learning_rate,
                                              global_step * batch_size,
-                                             45000,
+                                             FLAGS.train_records * 20,
                                              0.99,
                                              staircase=True)
   # Optimizer.
@@ -136,13 +130,11 @@ def training(loss, learning_rate):
 def run_training():
   with tf.Graph().as_default():
 
-    train_images, train_labels = distorted_inputs(num_epochs=2)
+    train_images, train_labels = distorted_inputs(num_epochs=FLAGS.num_epochs)
 
     logits = inference(train=True, images=train_images)
     loss = calc_loss(logits, train_labels)
     train_op, curr_lr = training(loss, learning_rate=0.015)
-
-    train_accuracy = accuracy(logits, train_labels)
 
     saver = tf.train.Saver(tf.all_variables())
 
@@ -150,43 +142,28 @@ def run_training():
 
     sess = tf.Session()
     sess.run(init_op)
+    tf.train.start_queue_runners(sess=sess)
 
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+    for step in xrange(int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size)):
 
-    try:
-      step = 0
-      while not coord.should_stop():
+      start_time = time.time()
+      _, lr, loss_value = sess.run([train_op, curr_lr, loss])
+      duration = time.time() - start_time
 
-        _, lr, loss_value, batch_accuracy = sess.run([train_op, curr_lr, loss, train_accuracy])
+      if step % 225 == 0 or step == int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size):
+        print "------------------------------------------"
+        print "Examples/sec: ", FLAGS.batch_size/duration
+        print "Sec/batch: ", float(duration)
+        print "Current epoch: ", (float(step) * batch_size) / FLAGS.train_records
+        print "Current learning rate: ", lr
+        print "Minibatch loss at step", step, ":", loss_value
+        save_path = saver.save(sess, "./model.ckpt")
+        print "Model saved in file: ", save_path
+        print "Validation accuracy: ", evaluate('valid.tfrecords')
 
-        if step % 225 == 0:
-          print "------------------------------------------"
-          print "Current epoch: ", (float(step) * batch_size) / 45000
-          print "Current learning rate: ", lr
-          print "Minibatch loss at step", step, ":", loss_value
-          print "Minibatch accuracy: ", 100 * float(np.sum(batch_accuracy))/float(batch_size)
-          save_path = saver.save(sess, "./model.ckpt")
-          print "Model saved in file: ", save_path
-          print "Validation accuracy: ", evaluate('valid.tfrecords')
-        step += 1
-
-    except tf.errors.OutOfRangeError:
-      print "------------------------------------------"
-      print "Current epoch: ", (float(step) * batch_size) / 45000
-      print "Current learning rate: ", lr
-      print "Minibatch loss at step", step, ":", loss_value
-      print "Minibatch accuracy: ", 100 * float(np.sum(batch_accuracy))/float(batch_size)
-      print "===================================="
-      save_path = saver.save(sess, "./model.ckpt")
-      print "Model saved in file: ", save_path
-      print "Validation accuracy: ", evaluate('valid.tfrecords')
-      print "Test accuracy: ", evaluate('test.tfrecords')
-    finally:
-      coord.request_stop()
-
-    coord.join(threads)
-    sess.close()
+    print "===================================="
+    print "Validation accuracy: ", evaluate('valid.tfrecords')
+    print "Test accuracy: ", evaluate('test.tfrecords')
 
 
 def main():
