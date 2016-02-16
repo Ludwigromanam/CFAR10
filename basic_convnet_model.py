@@ -34,8 +34,13 @@ def evaluate(test_set):
       saver = tf.train.Saver(tf.all_variables())
 
       sess = tf.Session()
-      tf.train.start_queue_runners(sess=sess)
+      coord = tf.train.Coordinator()
       saver.restore(sess=sess, save_path='model.ckpt')
+
+      threads = []
+      for qr in tf.get_collection(tf.GraphKeys.QUEUE_RUNNERS):
+        threads.extend(qr.create_threads(sess, coord=coord, daemon=True,
+                                         start=True))
 
       true_count = 0
       if test_set == 'valid.tfrecords':
@@ -43,9 +48,12 @@ def evaluate(test_set):
       else:
         num_records = FLAGS.test_records
 
-      for step in xrange(num_records/FLAGS.batch_size):
+      for step in xrange(int(num_records/FLAGS.batch_size)):
         acc = sess.run(test_acc)
         true_count += np.sum(acc)
+
+      coord.request_stop()
+      coord.join(threads, stop_grace_period_secs=10)
 
       return 100 * (float(true_count)/num_records)
 
