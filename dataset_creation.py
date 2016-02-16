@@ -3,10 +3,14 @@ import cPickle as pickle
 import tarfile
 import tensorflow as tf
 
-IN_IMAGE_HEIGHT = 32
-IN_IMAGE_WIDTH = 32
-OUT_IMAGE_HEIGHT = 24
-OUT_IMAGE_WIDTH = 24
+tf.app.flags.DEFINE_integer('input_image_size', 32, 'The size of the images in the database')
+tf.app.flags.DEFINE_integer('output_image_size', 24, 'The size of the cropped images for deep learning')
+tf.app.flags.DEFINE_integer('input_image_channels', 3, 'The depth of the images in the database')
+tf.app.flags.DEFINE_integer('num_labels', 10, 'The number of classes in the label file')
+tf.app.flags.DEFINE_integer('cross_valid', 5000, 'The number of records to hold for cross-validation')
+
+FLAGS = tf.app.flags.FLAGS
+
 
 def extract(filename):
   tar = tarfile.open(filename)
@@ -28,43 +32,18 @@ def randomize(dataset, labels):
     return shuffled_dataset, shuffled_labels
 
 
-def train_transform(dataset):
-    train_graph = tf.Graph()
-    with train_graph.as_default():
-            tf_image = tf.placeholder(tf.float32, (IN_IMAGE_HEIGHT, IN_IMAGE_WIDTH, 3))
-            distorted_image = tf.image.random_crop(tf_image, [OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH])
-            distorted_image = tf.image.random_flip_left_right(distorted_image)
-            distorted_image = tf.image.random_brightness(distorted_image, max_delta=63)
-            distorted_image = tf.image.random_contrast(distorted_image, lower=0.2, upper=1.8)
-            white_image = tf.image.per_image_whitening(distorted_image)
-    new_dataset = np.empty((np.shape(dataset)[0], OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH, 3))
-    for image_index in range(0, np.shape(dataset)[0]):
-        with tf.Session(graph=train_graph):
-            image = dataset[image_index, :, :, :]
-            transformed_image = white_image.eval(feed_dict={tf_image: image})
-            new_dataset[image_index, :, :, :] = transformed_image
-            if image_index % 100 == 0:
-                print 'Now on record', image_index
-
-    return new_dataset
-
-
-def test_transform(dataset):
-    test_graph = tf.Graph()
-    with test_graph.as_default():
-        tf_image = tf.placeholder(tf.float32, (IN_IMAGE_HEIGHT, IN_IMAGE_WIDTH, 3))
-        distorted_image = tf.image.resize_image_with_crop_or_pad(tf_image, OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH)
-        white_image = tf.image.per_image_whitening(distorted_image)
-    new_dataset = np.empty((np.shape(dataset)[0], OUT_IMAGE_HEIGHT, OUT_IMAGE_WIDTH, 3))
-    for image_index in range(0, np.shape(dataset)[0]):
-        with tf.Session(graph=test_graph):
-            image = dataset[image_index, :, :, :]
-            transformed_image = white_image.eval(feed_dict={tf_image: image})
-            new_dataset[image_index, :, :, :] = transformed_image
-            if image_index % 100 == 0:
-                print 'Now on record', image_index
-
-    return new_dataset
+def tensorflow_conversion(images, labels, name):
+    num_examples = labels.shape[0]
+    filename = name + '.tfrecords'
+    print 'Writing', filename
+    writer = tf.python_io.TFRecordWriter(filename)
+    for index in range(num_examples):
+        image_raw = images[index].tostring()
+        example = tf.train.Example(features=tf.train.Features(feature={
+            'label': tf.train.Feature(int64_list=tf.train.Int64List(value=[labels[index]])),
+            'image_raw': tf.train.Feature(bytes_list=tf.train.BytesList(value=[image_raw]))
+        }))
+        writer.write(example.SerializeToString())
 
 
 def create_cfar10_data():
@@ -78,7 +57,8 @@ def create_cfar10_data():
 
     main_dataset = np.vstack([batch1['data'], batch2['data'], batch3['data'], batch4['data'], batch5['data']])
     main_labels = np.reshape(np.array(np.hstack([batch1['labels'], batch2['labels'],
-                                      batch3['labels'], batch4['labels'], batch5['labels']])), (np.shape(main_dataset)[0],))
+                                      batch3['labels'], batch4['labels'], batch5['labels']])),
+                             (np.shape(main_dataset)[0],))
 
     test_dataset = test_batch['data']
     test_labels = np.reshape(np.array(test_batch['labels']), (np.shape(test_dataset)[0],))
@@ -86,13 +66,11 @@ def create_cfar10_data():
     main_dataset, main_labels = randomize(main_dataset, main_labels)
     test_dataset, test_labels = randomize(test_dataset, test_labels)
 
-    cross_valid = 5000
+    train_dataset = main_dataset[:np.shape(main_dataset)[0] - FLAGS.cross_valid, :]
+    valid_dataset = main_dataset[np.shape(main_dataset)[0] - FLAGS.cross_valid:, :]
 
-    train_dataset = main_dataset[:np.shape(main_dataset)[0] - cross_valid, :]
-    valid_dataset = main_dataset[np.shape(main_dataset)[0]-cross_valid:, :]
-
-    train_labels = main_labels[:len(main_labels)-cross_valid]
-    valid_labels = main_labels[len(main_labels)-cross_valid:]
+    train_labels = main_labels[:len(main_labels) - FLAGS.cross_valid]
+    valid_labels = main_labels[len(main_labels) - FLAGS.cross_valid:]
 
     print np.unique(valid_labels)
     print np.bincount(valid_labels)
@@ -103,22 +81,16 @@ def create_cfar10_data():
     print np.unique(test_labels)
     print np.bincount(test_labels)
 
-    image_size = 32
-    num_channels = 3
-    num_labels = 10
-
     def reformat(dataset, labels):
-      rgb = dataset.reshape(-1, num_channels, image_size * image_size).reshape(-1, num_channels, image_size, image_size)
+      rgb = dataset.reshape(-1, FLAGS.input_image_channels, FLAGS.input_image_size * FLAGS.input_image_size)
+      rgb = rgb.reshape(-1, FLAGS.input_image_channels, FLAGS.input_image_size, FLAGS.input_image_size)
       dataset = rgb.swapaxes(3, 1).swapaxes(1, 2)
-      labels = (np.arange(num_labels) == labels[:,None]).astype(np.float32)
+      # labels = (np.arange(FLAGS.num_labels) == labels[:, None]).astype(np.int32)
       return dataset, labels
 
     train_dataset, train_labels = reformat(train_dataset, train_labels)
     valid_dataset, valid_labels = reformat(valid_dataset, valid_labels)
     test_dataset, test_labels = reformat(test_dataset, test_labels)
-
-    valid_dataset = test_transform(valid_dataset)
-    test_dataset = test_transform(test_dataset)
 
     print "Train Dataset Dimensions:"
     print np.shape(train_dataset), np.shape(train_labels)
@@ -129,36 +101,7 @@ def create_cfar10_data():
     print "Test Dataset Dimensions:"
     print np.shape(test_dataset), np.shape(test_labels)
 
-    pickle_file = 'CFAR10.pickle'
+    tensorflow_conversion(train_dataset, train_labels, 'train')
+    tensorflow_conversion(valid_dataset, valid_labels, 'valid')
+    tensorflow_conversion(test_dataset, test_labels, 'test')
 
-    try:
-        f = open(pickle_file, 'wb')
-        save = {
-            'train_dataset': train_dataset,
-            'train_labels': train_labels,
-            'valid_dataset': valid_dataset,
-            'valid_labels': valid_labels,
-            'test_dataset': test_dataset,
-            'test_labels': test_labels
-        }
-        pickle.dump(save, f, pickle.HIGHEST_PROTOCOL)
-        f.close()
-    except Exception as e:
-        print 'Unable to save data to', pickle_file, ':', e
-        raise
-
-
-def get_cfar10_data():
-    pickle_file = 'CFAR10.pickle'
-
-    with open(pickle_file, 'rb') as f:
-        save = pickle.load(f)
-        train_dataset = save['train_dataset']
-        train_labels = save['train_labels']
-        valid_dataset = save['valid_dataset']
-        valid_labels = save['valid_labels']
-        test_dataset = save['test_dataset']
-        test_labels = save['test_labels']
-        del save
-
-    return train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels
