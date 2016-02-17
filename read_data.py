@@ -12,7 +12,7 @@ tf.app.flags.DEFINE_integer('batch_size', 100, 'The batch size.')
 FLAGS = tf.app.flags.FLAGS
 
 
-def distorted_inputs(num_epochs):
+def distorted_inputs(num_epochs, num_threads):
 
     filename_queue = tf.train.string_input_producer(['train.tfrecords'], num_epochs=num_epochs)
     result = read_data(filename_queue)
@@ -26,7 +26,7 @@ def distorted_inputs(num_epochs):
     distorted_image = tf.image.random_contrast(distorted_image, lower=0.2, upper=1.8)
     white_image = tf.image.per_image_whitening(distorted_image)
 
-    return generate_batches(white_image, result.label, min_queue)
+    return generate_batches(white_image, result.label, min_queue, num_threads)
 
 
 def inputs(filename):
@@ -43,7 +43,7 @@ def inputs(filename):
                                                              FLAGS.output_image_size)
     white_image = tf.image.per_image_whitening(distorted_image)
 
-    return generate_batches(white_image, result.label, min_queue)
+    return generate_batches(white_image, result.label, min_queue, num_threads=1)
 
 
 def read_data(filename_queue):
@@ -72,12 +72,12 @@ def read_data(filename_queue):
     return result
 
 
-def generate_batches(image, label, min_queue_examples):
+def generate_batches(image, label, min_queue_examples, num_threads):
 
     images, labels = tf.train.shuffle_batch(
         [image, label], batch_size=FLAGS.batch_size,
         capacity=int(min_queue_examples + 3 * FLAGS.batch_size),
-        num_threads=5,
+        num_threads=num_threads,
         min_after_dequeue=int(min_queue_examples)
     )
 

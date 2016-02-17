@@ -50,13 +50,12 @@ def evaluate(test_set):
 
         step = 0
         while step < int(num_records/FLAGS.batch_size):
-          print step
           acc = sess.run(test_acc)
           true_count += np.sum(acc)
           step += 1
 
       except tf.errors.OutOfRangeError as e:
-        print 'Issues' + e
+        print 'Issues: ', e
       finally:
         coord.request_stop()
         coord.join(threads, stop_grace_period_secs=10)
@@ -139,11 +138,11 @@ def training(loss, learning_rate):
 def run_training():
   with tf.Graph().as_default():
 
-    train_images, train_labels = distorted_inputs(num_epochs=FLAGS.num_epochs)
+    train_images, train_labels = distorted_inputs(num_epochs=FLAGS.num_epochs, num_threads=64)
 
     logits = inference(train=True, images=train_images)
     loss = calc_loss(logits, train_labels)
-    train_op, curr_lr = training(loss, learning_rate=0.015)
+    train_op, curr_lr = training(loss, learning_rate=0.02)
 
     saver = tf.train.Saver(tf.all_variables())
 
