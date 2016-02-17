@@ -15,7 +15,7 @@ num_labels = 10
 batch_size = 100
 num_channels = 3
 
-tf.app.flags.DEFINE_integer('num_epochs', 200, 'The number of validations records')
+tf.app.flags.DEFINE_integer('num_epochs', 350, 'The number of validations records')
 FLAGS = tf.app.flags.FLAGS
 
 
