@@ -51,20 +51,20 @@ with graph.as_default():
 
 def run_model_image(graph, image):
     with tf.Session(graph=graph) as session:
-        tf.train.Saver().restore(session, './model.ckpt')
+        tf.train.Saver().restore(session, './tmodel.ckpt')
         feed_dict = {tf_train_dataset: image}
         predictions = session.run([train_prediction], feed_dict=feed_dict)
         print predictions
 
 
-image = cv2.imread('/Users/pspitler3/Documents/caffe_images/car.jpg')
+#image = cv2.imread('/Users/pspitler3/Documents/caffe_images/car.jpg')
 #image = image[:, 60:420, :]
-image = cv2.resize(image, (24, 24), interpolation=cv2.INTER_AREA)
-cv2.imwrite('/Users/pspitler3/Documents/caffe_images/car_thumb.jpg', image)
+#image = cv2.resize(image, (24, 24), interpolation=cv2.INTER_AREA)
+#cv2.imwrite('/Users/pspitler3/Documents/caffe_images/car_thumb.jpg', image)
 
-imdata = mpimg.imread('/Users/pspitler3/Documents/caffe_images/car_thumb.jpg')
+imdata = mpimg.imread('/Users/pspitler3/Documents/caffe_images/dogsandcar_thumb.jpg')
 
-imdata = imdata.reshape((1, 24, 24, 3))
+imdata = imdata.reshape((1, image_size, image_size, 3))
 
 run_model_image(graph=graph, image=imdata)
 

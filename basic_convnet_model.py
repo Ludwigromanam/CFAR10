@@ -30,7 +30,7 @@ def evaluate(test_set):
 
       images, labels = inputs(test_set)
 
-      logits = inference(train=False, images=images)
+      logits = inference(train=False, images=images, hidden_dprob=0)
       test_acc = accuracy(logits, labels)
 
       saver = tf.train.Saver(tf.all_variables())
@@ -64,7 +64,7 @@ def evaluate(test_set):
       return 100 * (float(true_count)/num_records)
 
 
-def inference(train, images):
+def inference(train, images, hidden_dprob):
   # Variables.
   w1 = tf.Variable(tf.truncated_normal([patch_size, patch_size, num_channels, depth], stddev=0.1))
   b1 = tf.Variable(tf.zeros([depth]))
@@ -83,11 +83,9 @@ def inference(train, images):
     relu = tf.nn.relu(conv + b1)
     relu_dropout = tf.nn.dropout(relu, hidden_dprob)
     pool = tf.nn.max_pool(relu_dropout, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
-    norm = tf.nn.lrn(pool, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
-    conv = tf.nn.conv2d(norm, w2, [1, 1, 1, 1], padding='SAME')
+    conv = tf.nn.conv2d(pool, w2, [1, 1, 1, 1], padding='SAME')
     relu = tf.nn.relu(conv + b2)
-    norm = tf.nn.lrn(relu, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
-    relu_dropout = tf.nn.dropout(norm, hidden_dprob)
+    relu_dropout = tf.nn.dropout(relu, hidden_dprob)
     pool = tf.nn.max_pool(relu_dropout, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
     hidden = tf.nn.relu(tf.nn.conv2d(pool, w3, [1, 1, 1, 1], padding='VALID') + b3)
     hidden_dropout = tf.nn.dropout(hidden, hidden_dprob)
@@ -100,11 +98,9 @@ def inference(train, images):
     conv = tf.nn.conv2d(data, w1, [1, 1, 1, 1], padding='SAME')
     relu = tf.nn.relu(conv + b1)
     pool = tf.nn.max_pool(relu, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
-    norm = tf.nn.lrn(pool, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
-    conv = tf.nn.conv2d(norm, w2, [1, 1, 1, 1], padding='SAME')
+    conv = tf.nn.conv2d(pool, w2, [1, 1, 1, 1], padding='SAME')
     relu = tf.nn.relu(conv + b2)
-    norm = tf.nn.lrn(relu, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
-    pool = tf.nn.max_pool(norm, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    pool = tf.nn.max_pool(relu, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
     hidden = tf.nn.relu(tf.nn.conv2d(pool, w3, [1, 1, 1, 1], padding='VALID') + b3)
     hidden2 = tf.nn.relu(tf.nn.conv2d(hidden, w4, [1, 1, 1, 1], padding='VALID') + b4)
     output = tf.nn.conv2d(hidden2, w5, [1, 1, 1, 1], padding='VALID') + b5
@@ -138,11 +134,11 @@ def training(loss, learning_rate):
 def run_training():
   with tf.Graph().as_default():
 
-    train_images, train_labels = distorted_inputs(num_epochs=FLAGS.num_epochs, num_threads=25)
+    train_images, train_labels = distorted_inputs(num_epochs=FLAGS.num_epochs, num_threads=8)
 
-    logits = inference(train=True, images=train_images)
+    logits = inference(train=True, images=train_images, hidden_dprob=0.7)
     loss = calc_loss(logits, train_labels)
-    train_op, curr_lr = training(loss, learning_rate=0.02)
+    train_op, curr_lr = training(loss, learning_rate=0.025)
 
     saver = tf.train.Saver(tf.all_variables())
 
