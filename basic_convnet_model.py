@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 import time
 import os
+import argparse
 from read_data import distorted_inputs, inputs
 
 patch_size = 5
@@ -177,4 +178,8 @@ def run_training(path):
 
 
 if __name__ == '__main__':
-  run_training('./basic_model.ckpt')
+  parser = argparse.ArgumentParser()
+  parser.add_argument(
+    'checkpoint_file', help='The checkpoint file to write output to.')
+  args = parser.parse_args()
+  run_training(args.checkpoint_file)
