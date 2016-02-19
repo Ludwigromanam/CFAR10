@@ -15,7 +15,8 @@ num_labels = 10
 batch_size = 100
 num_channels = 3
 
-tf.app.flags.DEFINE_integer('num_epochs', 350, 'The number of validations records')
+num_epochs = 350
+
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -27,6 +28,8 @@ def accuracy(predictions, labels):
 
 def evaluate(test_set, path):
     with tf.Graph().as_default():
+
+      global_step = tf.Variable(0, trainable=False)
 
       images, labels = inputs(test_set)
 
@@ -119,8 +122,7 @@ def calc_loss(logits, labels):
   return loss
 
 
-def training(loss, learning_rate):
-  global_step = tf.Variable(0)
+def training(loss, learning_rate, global_step):
   learning_rate = tf.train.exponential_decay(learning_rate,
                                              global_step * batch_size,
                                              FLAGS.train_records * 20,
@@ -134,11 +136,12 @@ def training(loss, learning_rate):
 def run_training(path):
   with tf.Graph().as_default():
 
-    train_images, train_labels = distorted_inputs(num_epochs=FLAGS.num_epochs, num_threads=8)
+    global_step = tf.Variable(0, trainable=False)
+    train_images, train_labels = distorted_inputs(num_epochs=num_epochs, num_threads=8)
 
     logits = inference(train=True, images=train_images)
     loss = calc_loss(logits, train_labels)
-    train_op, curr_lr = training(loss, learning_rate=0.025)
+    train_op, curr_lr = training(loss, learning_rate=0.025, global_step=global_step)
 
     saver = tf.train.Saver(tf.all_variables())
     init_op = tf.initialize_all_variables()
@@ -154,20 +157,20 @@ def run_training(path):
 
     tf.train.start_queue_runners(sess=sess)
 
-    for step in xrange(int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size)):
+    for step in xrange(int((num_epochs * FLAGS.train_records)/FLAGS.batch_size)):
 
       start_time = time.time()
       _, lr, loss_value = sess.run([train_op, curr_lr, loss])
       duration = time.time() - start_time
 
-      if step % 225 == 0 or step == int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size):
+      if step % 225 == 0 or step == int((num_epochs * FLAGS.train_records)/FLAGS.batch_size):
         print "------------------------------------------"
         print "Examples/sec: ", FLAGS.batch_size/duration
         print "Sec/batch: ", float(duration)
         print "Current epoch: ", (float(step) * batch_size) / FLAGS.train_records
         print "Current learning rate: ", lr
         print "Minibatch loss at step", step, ":", loss_value
-      if step % 900 == 0 or step == int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size) - 1:
+      if step % 900 == 0 or step == int((num_epochs * FLAGS.train_records)/FLAGS.batch_size) - 1:
         save_path = saver.save(sess, path)
         print "Model saved in file: ", save_path
         print "Validation accuracy: ", evaluate('valid.tfrecords', path)
