@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import time
+import os
 from read_data import distorted_inputs, inputs
 
 patch_size = 5
@@ -23,7 +24,7 @@ def accuracy(predictions, labels):
   return matches
 
 
-def evaluate(test_set):
+def evaluate(test_set, path):
     with tf.Graph().as_default():
 
       images, labels = inputs(test_set)
@@ -35,7 +36,7 @@ def evaluate(test_set):
 
       sess = tf.Session()
       coord = tf.train.Coordinator()
-      saver.restore(sess=sess, save_path='model.ckpt')
+      saver.restore(sess=sess, save_path=path)
 
       threads = tf.train.start_queue_runners(coord=coord, sess=sess)
 
@@ -129,7 +130,7 @@ def training(loss, learning_rate):
   return optimizer, learning_rate
 
 
-def run_training():
+def run_training(path):
   with tf.Graph().as_default():
 
     train_images, train_labels = distorted_inputs(num_epochs=FLAGS.num_epochs, num_threads=8)
@@ -139,11 +140,17 @@ def run_training():
     train_op, curr_lr = training(loss, learning_rate=0.025)
 
     saver = tf.train.Saver(tf.all_variables())
-
     init_op = tf.initialize_all_variables()
 
     sess = tf.Session()
-    sess.run(init_op)
+
+    if os.path.isfile(path):
+      saver.restore(sess=sess, save_path=path)
+      print 'Model Restored'
+    else:
+      sess.run(init_op)
+      print 'Model Initialized'
+
     tf.train.start_queue_runners(sess=sess)
 
     for step in xrange(int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size)):
@@ -160,14 +167,14 @@ def run_training():
         print "Current learning rate: ", lr
         print "Minibatch loss at step", step, ":", loss_value
       if step % 900 == 0 or step == int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size) - 1:
-        save_path = saver.save(sess, "./model.ckpt")
+        save_path = saver.save(sess, path)
         print "Model saved in file: ", save_path
-        print "Validation accuracy: ", evaluate('valid.tfrecords')
+        print "Validation accuracy: ", evaluate('valid.tfrecords', path)
 
     print "===================================="
-    print "Validation accuracy: ", evaluate('valid.tfrecords')
-    print "Test accuracy: ", evaluate('test.tfrecords')
+    print "Validation accuracy: ", evaluate('valid.tfrecords', path)
+    print "Test accuracy: ", evaluate('test.tfrecords', path)
 
 
 if __name__ == '__main__':
-  run_training()
+  run_training('./basic_model.ckpt')
