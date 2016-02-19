@@ -1,9 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import time
-import logging
 from read_data import distorted_inputs, inputs
-logging.getLogger("tensorflow").setLevel(logging.CRITICAL)
 
 patch_size = 5
 depth = 64
@@ -30,7 +28,7 @@ def evaluate(test_set):
 
       images, labels = inputs(test_set)
 
-      logits = inference(train=False, images=images, hidden_dprob=0)
+      logits = inference(train=False, images=images)
       test_acc = accuracy(logits, labels)
 
       saver = tf.train.Saver(tf.all_variables())
@@ -64,7 +62,7 @@ def evaluate(test_set):
       return 100 * (float(true_count)/num_records)
 
 
-def inference(train, images, hidden_dprob):
+def inference(train, images):
   # Variables.
   w1 = tf.Variable(tf.truncated_normal([patch_size, patch_size, num_channels, depth], stddev=0.1))
   b1 = tf.Variable(tf.zeros([depth]))
@@ -136,7 +134,7 @@ def run_training():
 
     train_images, train_labels = distorted_inputs(num_epochs=FLAGS.num_epochs, num_threads=8)
 
-    logits = inference(train=True, images=train_images, hidden_dprob=0.7)
+    logits = inference(train=True, images=train_images)
     loss = calc_loss(logits, train_labels)
     train_op, curr_lr = training(loss, learning_rate=0.025)
 
@@ -171,5 +169,5 @@ def run_training():
     print "Test accuracy: ", evaluate('test.tfrecords')
 
 
-def main():
+if __name__ == '__main__':
   run_training()

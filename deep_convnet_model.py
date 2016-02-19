@@ -1,126 +1,72 @@
 import numpy as np
 import tensorflow as tf
-from dataset_creation import get_cfar10_data
-
-
-def accuracy(predictions, labels):
-  return (100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1))
-          / predictions.shape[0])
-
-
-def batch_accuracy_test(session, batch_size, dataset, labels, tensorflow_dataset, tensorflow_function):
-
-  accurate_labels = 0.0
-
-  for step in xrange(int(labels.shape[0]/batch_size)):
-    offset = (step * batch_size) % (labels.shape[0] - batch_size)
-    batch_data = dataset[offset:(offset + batch_size), :, :, :]
-    batch_labels = labels[offset:(offset + batch_size), :]
-    feed_dict = {tensorflow_dataset: batch_data}
-    predictions = session.run([tensorflow_function], feed_dict=feed_dict)
-    predictions = np.reshape(np.array(predictions), (batch_size, labels.shape[1]))
-    accurate_labels += np.sum(np.argmax(predictions, 1) == np.argmax(batch_labels, 1))
-
-  return (100.0 * accurate_labels)/labels.shape[0]
-
-
-def initial_model_session(graph,
-                          num_epochs, batch_size,
-                          train_dataset, train_labels):
-  with tf.Session(graph=graph) as session:
-    tf.initialize_all_variables().run()
-    print "Initialized"
-    for step in xrange(int(num_epochs * (train_labels.shape[0]/batch_size)) + 1):
-      offset = (step * batch_size) % (train_labels.shape[0] - batch_size)
-      batch_data = train_dataset[offset:(offset + batch_size), :, :, :]
-      batch_labels = train_labels[offset:(offset + batch_size), :]
-      feed_dict = {tf_train_dataset: batch_data, tf_train_labels: batch_labels,
-                   conv_dprob: 0.7,
-                   hidden_dprob: 0.7}
-      _, l, lr, predictions = session.run([optimizer, loss, learning_rate, train_prediction], feed_dict=feed_dict)
-      if (step % 100 == 0 and step != 0):
-        print "------------------------------------------"
-        print "Current epoch: ", (float(step) * batch_size) / train_labels.shape[0]
-        print "Current learning rate: ", lr
-        print "Minibatch loss at step", step, ":", l
-        print "Minibatch accuracy: %.1f%%" % accuracy(predictions, batch_labels)
-        print "Validation accuracy: %.1f%%" % batch_accuracy_test(session=session, batch_size=batch_size,
-                                                                  dataset=valid_dataset, labels=valid_labels,
-                                                                  tensorflow_dataset=tf_valid_dataset,
-                                                                  tensorflow_function=valid_prediction)
-      if (step % 1000 == 0 and step != 0):
-        # Save the variables to disk.
-        save_path = saver.save(session, "./model2.ckpt")
-        print "Model saved in file: ", save_path
-
-    print "===================================="
-    print "Test accuracy: %.1f%%" % batch_accuracy_test(session=session, batch_size=batch_size,
-                                                        dataset=test_dataset, labels=test_labels,
-                                                        tensorflow_dataset=tf_test_dataset,
-                                                        tensorflow_function=test_prediction)
-
-
-def refine_model_session(graph,
-                          num_epochs, batch_size,
-                          train_dataset, train_labels):
-  with tf.Session(graph=graph) as session:
-    saver.restore(session, './model2.ckpt')
-    print "Model Restored"
-    for step in xrange(int(num_epochs * (train_labels.shape[0]/batch_size)) + 1):
-      offset = (step * batch_size) % (train_labels.shape[0] - batch_size)
-      batch_data = train_dataset[offset:(offset + batch_size), :, :, :]
-      batch_labels = train_labels[offset:(offset + batch_size), :]
-      feed_dict = {tf_train_dataset: batch_data, tf_train_labels: batch_labels,
-                   conv_dprob: 0.7,
-                   hidden_dprob: 0.7}
-      _, l, lr, predictions = session.run([optimizer, loss, learning_rate, train_prediction], feed_dict=feed_dict)
-      if (step % 100 == 0):
-        print "------------------------------------------"
-        print "Current epoch: ", (float(step) * batch_size) / train_labels.shape[0]
-        print "Current learning rate: ", lr
-        print "Minibatch loss at step", step, ":", l
-        print "Minibatch accuracy: %.1f%%" % accuracy(predictions, batch_labels)
-        print "Validation accuracy: %.1f%%" % batch_accuracy_test(session=session, batch_size=batch_size,
-                                                                  dataset=valid_dataset, labels=valid_labels,
-                                                                  tensorflow_dataset=tf_valid_dataset,
-                                                                  tensorflow_function=valid_prediction)
-      if (step % 1000 == 0):
-        # Save the variables to disk.
-        save_path = saver.save(session, "./model2_refine.ckpt")
-        print "Model saved in file: ", save_path
-
-    print "===================================="
-    print "Test accuracy: %.1f%%" % batch_accuracy_test(session=session, batch_size=batch_size,
-                                                        dataset=test_dataset, labels=test_labels,
-                                                        tensorflow_dataset=tf_test_dataset,
-                                                        tensorflow_function=test_prediction)
-
+import time
+from read_data import distorted_inputs, inputs
 
 image_size = 24
 num_labels = 10
 num_channels = 3 # grayscale
-batch_size = 200
+batch_size = 100
 patch_size = 3
 depth1 = 64
 depth2 = 128
 depth3 = 384
 depth4 = 192
 
-train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels = get_cfar10_data()
+conv_dprob = 0.8
+hidden_dprob = 0.7
 
-graph = tf.Graph()
+tf.app.flags.DEFINE_integer('num_epochs', 350, 'The number of validations records')
+FLAGS = tf.app.flags.FLAGS
 
-with graph.as_default():
 
-  # Input data.
-  tf_train_dataset = tf.placeholder(tf.float32, shape=(batch_size, image_size, image_size, num_channels))
-  tf_train_labels = tf.placeholder(tf.float32, shape=(batch_size, num_labels))
-  tf_valid_dataset = tf.placeholder(tf.float32, shape=(batch_size, image_size, image_size, num_channels))
-  tf_test_dataset = tf.placeholder(tf.float32, shape=(batch_size, image_size, image_size, num_channels))
-  conv_dprob = tf.placeholder('float')
-  hidden_dprob = tf.placeholder('float')
+def accuracy(predictions, labels):
+  labels = tf.cast(labels, tf.int32)
+  matches = tf.nn.in_top_k(predictions=predictions, targets=tf.arg_max(labels, 1), k=1)
+  return matches
 
-  # Variables.
+
+def evaluate(test_set):
+    with tf.Graph().as_default():
+
+      images, labels = inputs(test_set)
+
+      logits = inference(train=False, images=images)
+      test_acc = accuracy(logits, labels)
+
+      saver = tf.train.Saver(tf.all_variables())
+
+      sess = tf.Session()
+      coord = tf.train.Coordinator()
+      saver.restore(sess=sess, save_path='model.ckpt')
+
+      threads = tf.train.start_queue_runners(coord=coord, sess=sess)
+
+      try:
+        true_count = 0
+        if test_set == 'valid.tfrecords':
+          num_records = FLAGS.valid_records
+        else:
+          num_records = FLAGS.test_records
+
+        step = 0
+        while step < int(num_records/FLAGS.batch_size):
+          acc = sess.run(test_acc)
+          true_count += np.sum(acc)
+          step += 1
+
+      except tf.errors.OutOfRangeError as e:
+        print 'Issues: ', e
+      finally:
+        coord.request_stop()
+        coord.join(threads, stop_grace_period_secs=10)
+        sess.close()
+
+      return 100 * (float(true_count)/num_records)
+
+
+def inference(train, images):
+
   conv1_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, num_channels, depth1], stddev=0.1))
   conv1_bias = tf.Variable(tf.zeros([depth1]))
   conv2_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth1, depth1], stddev=0.1))
@@ -200,31 +146,70 @@ with graph.as_default():
     output = tf.reshape(output + conv7_bias, [-1, num_labels])
     return output
 
+  if train:
+    logits = train_model(images)
+  else:
+    logits = test_model(images)
 
-  # Training computation.
-  logits = train_model(tf_train_dataset)
-  loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, tf_train_labels))
-  #loss += 0.01 * (tf.nn.l2_loss(w3) + tf.nn.l2_loss(b3) +
-  #               tf.nn.l2_loss(w4) + tf.nn.l2_loss(b4))
+  return logits
 
+
+def calc_loss(logits, labels):
+  loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, labels))
+  return loss
+
+
+def training(loss, learning_rate):
   global_step = tf.Variable(0)
-  learning_rate = tf.train.exponential_decay(0.0005,
-                                            global_step * batch_size,
-                                            train_labels.shape[0] * 10,
-                                            0.99,
-                                            staircase=True)
+  learning_rate = tf.train.exponential_decay(learning_rate,
+                                             global_step * batch_size,
+                                             FLAGS.train_records * 20,
+                                             0.99,
+                                             staircase=True)
   # Optimizer.
   optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
-
-  # Add ops to save and restore all the variables.
-  saver = tf.train.Saver()
-
-  # Predictions for the training, validation, and test data.
-  train_prediction = tf.nn.softmax(test_model(tf_train_dataset))
-  valid_prediction = tf.nn.softmax(test_model(tf_valid_dataset))
-  test_prediction = tf.nn.softmax(test_model(tf_test_dataset))
+  return optimizer, learning_rate
 
 
-num_epochs = 300
-initial_model_session(graph=graph, num_epochs=num_epochs, batch_size=batch_size, train_dataset=train_dataset,
-                     train_labels=train_labels)
+def run_training():
+  with tf.Graph().as_default():
+
+    train_images, train_labels = distorted_inputs(num_epochs=FLAGS.num_epochs, num_threads=8)
+
+    logits = inference(train=True, images=train_images)
+    loss = calc_loss(logits, train_labels)
+    train_op, curr_lr = training(loss, learning_rate=0.0005)
+
+    saver = tf.train.Saver(tf.all_variables())
+
+    init_op = tf.initialize_all_variables()
+
+    sess = tf.Session()
+    sess.run(init_op)
+    tf.train.start_queue_runners(sess=sess)
+
+    for step in xrange(int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size)):
+
+      start_time = time.time()
+      _, lr, loss_value = sess.run([train_op, curr_lr, loss])
+      duration = time.time() - start_time
+
+      if step % 225 == 0 or step == int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size):
+        print "------------------------------------------"
+        print "Examples/sec: ", FLAGS.batch_size/duration
+        print "Sec/batch: ", float(duration)
+        print "Current epoch: ", (float(step) * batch_size) / FLAGS.train_records
+        print "Current learning rate: ", lr
+        print "Minibatch loss at step", step, ":", loss_value
+      if step % 900 == 0 or step == int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size) - 1:
+        save_path = saver.save(sess, "./model.ckpt")
+        print "Model saved in file: ", save_path
+        print "Validation accuracy: ", evaluate('valid.tfrecords')
+
+    print "===================================="
+    print "Validation accuracy: ", evaluate('valid.tfrecords')
+    print "Test accuracy: ", evaluate('test.tfrecords')
+
+
+if __name__ == '__main__':
+  run_training()
