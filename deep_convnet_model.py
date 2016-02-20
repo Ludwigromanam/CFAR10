@@ -18,7 +18,8 @@ depth4 = 192
 conv_dprob = 0.8
 hidden_dprob = 0.7
 
-num_epochs = 350
+#lr = 0.0005
+#num_epochs = 350
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -175,7 +176,7 @@ def run_training(path):
 
     logits = inference(train=True, images=train_images)
     loss = calc_loss(logits, train_labels)
-    train_op, curr_lr = training(loss, learning_rate=0.0005)
+    train_op, curr_lr = training(loss, learning_rate=lr)
 
     saver = tf.train.Saver(tf.all_variables())
 
@@ -195,7 +196,7 @@ def run_training(path):
     for step in xrange(int((num_epochs * FLAGS.train_records)/FLAGS.batch_size)):
 
       start_time = time.time()
-      _, lr, loss_value = sess.run([train_op, curr_lr, loss])
+      _, loss_value = sess.run([train_op, loss])
       duration = time.time() - start_time
 
       if step % 225 == 0 or step == int((num_epochs * FLAGS.train_records)/FLAGS.batch_size):
@@ -217,7 +218,10 @@ def run_training(path):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
-  parser.add_argument(
-    'checkpoint_file', help='The checkpoint file to write output to.')
+  parser.add_argument('checkpoint_file', help='The checkpoint file to write output to.')
+  parser.add_argument('num_epochs', help='The number of epochs to run for.')
+  parser.add_argument('lr', help='The learning rate to run on.')
   args = parser.parse_args()
+  num_epochs = int(args.num_epochs)
+  lr = float(args.lr)
   run_training(args.checkpoint_file)

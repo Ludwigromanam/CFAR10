@@ -57,7 +57,7 @@ def run_model_image(image):
 
       saver = tf.train.Saver(tf.all_variables())
       sess = tf.Session()
-      saver.restore(sess=sess, save_path='tmodel.ckpt')
+      saver.restore(sess=sess, save_path='t2model.ckpt')
       predictions = sess.run(train_prediction)
 
 
