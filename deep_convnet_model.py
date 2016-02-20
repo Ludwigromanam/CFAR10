@@ -18,7 +18,8 @@ depth4 = 192
 conv_dprob = 0.8
 hidden_dprob = 0.7
 
-tf.app.flags.DEFINE_integer('num_epochs', 350, 'The number of validations records')
+num_epochs = 350
+
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -170,7 +171,7 @@ def training(loss, learning_rate):
 def run_training(path):
   with tf.Graph().as_default():
 
-    train_images, train_labels = distorted_inputs(num_epochs=FLAGS.num_epochs, num_threads=8)
+    train_images, train_labels = distorted_inputs(num_threads=8)
 
     logits = inference(train=True, images=train_images)
     loss = calc_loss(logits, train_labels)
@@ -191,20 +192,20 @@ def run_training(path):
 
     tf.train.start_queue_runners(sess=sess)
 
-    for step in xrange(int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size)):
+    for step in xrange(int((num_epochs * FLAGS.train_records)/FLAGS.batch_size)):
 
       start_time = time.time()
       _, lr, loss_value = sess.run([train_op, curr_lr, loss])
       duration = time.time() - start_time
 
-      if step % 225 == 0 or step == int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size):
+      if step % 225 == 0 or step == int((num_epochs * FLAGS.train_records)/FLAGS.batch_size):
         print "------------------------------------------"
         print "Examples/sec: ", FLAGS.batch_size/duration
         print "Sec/batch: ", float(duration)
         print "Current epoch: ", (float(step) * batch_size) / FLAGS.train_records
         print "Current learning rate: ", lr
         print "Minibatch loss at step", step, ":", loss_value
-      if step % 900 == 0 or step == int((FLAGS.num_epochs * FLAGS.train_records)/FLAGS.batch_size) - 1:
+      if step % 900 == 0 or step == int((num_epochs * FLAGS.train_records)/FLAGS.batch_size) - 1:
         save_path = saver.save(sess, path)
         print "Model saved in file: ", save_path
         print "Validation accuracy: ", evaluate('valid.tfrecords', path)

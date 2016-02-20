@@ -129,7 +129,7 @@ def training(loss, learning_rate):
 def run_training(path):
   with tf.Graph().as_default():
 
-    train_images, train_labels = distorted_inputs(num_epochs=num_epochs, num_threads=8)
+    train_images, train_labels = distorted_inputs(num_threads=8)
 
     logits = inference(train=True, images=train_images)
     loss = calc_loss(logits, train_labels)

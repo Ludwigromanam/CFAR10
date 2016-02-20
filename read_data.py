@@ -12,7 +12,7 @@ tf.app.flags.DEFINE_integer('batch_size', 100, 'The batch size.')
 FLAGS = tf.app.flags.FLAGS
 
 
-def distorted_inputs(num_epochs, num_threads):
+def distorted_inputs(num_threads):
 
     filename_queue = tf.train.string_input_producer(['train.tfrecords'])
     result = read_data(filename_queue)
