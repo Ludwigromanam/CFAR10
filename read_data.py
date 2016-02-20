@@ -14,7 +14,7 @@ FLAGS = tf.app.flags.FLAGS
 
 def distorted_inputs(num_epochs, num_threads):
 
-    filename_queue = tf.train.string_input_producer(['train.tfrecords'], num_epochs=num_epochs)
+    filename_queue = tf.train.string_input_producer(['train.tfrecords'])
     result = read_data(filename_queue)
     min_queue = FLAGS.train_records * 0.4
 

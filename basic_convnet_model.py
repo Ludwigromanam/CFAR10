@@ -29,8 +29,6 @@ def accuracy(predictions, labels):
 def evaluate(test_set, path):
     with tf.Graph().as_default():
 
-      global_step = tf.Variable(0, trainable=False)
-
       images, labels = inputs(test_set)
 
       logits = inference(train=False, images=images)
@@ -122,26 +120,20 @@ def calc_loss(logits, labels):
   return loss
 
 
-def training(loss, learning_rate, global_step):
-  learning_rate = tf.train.exponential_decay(learning_rate,
-                                             global_step * batch_size,
-                                             FLAGS.train_records * 20,
-                                             0.99,
-                                             staircase=True)
+def training(loss, learning_rate):
   # Optimizer.
-  optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
+  optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
   return optimizer, learning_rate
 
 
 def run_training(path):
   with tf.Graph().as_default():
 
-    global_step = tf.Variable(0, trainable=False)
     train_images, train_labels = distorted_inputs(num_epochs=num_epochs, num_threads=8)
 
     logits = inference(train=True, images=train_images)
     loss = calc_loss(logits, train_labels)
-    train_op, curr_lr = training(loss, learning_rate=0.025, global_step=global_step)
+    train_op, curr_lr = training(loss, learning_rate=0.025)
 
     saver = tf.train.Saver(tf.all_variables())
     init_op = tf.initialize_all_variables()

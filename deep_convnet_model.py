@@ -162,14 +162,8 @@ def calc_loss(logits, labels):
 
 
 def training(loss, learning_rate):
-  global_step = tf.Variable(0)
-  learning_rate = tf.train.exponential_decay(learning_rate,
-                                             global_step * batch_size,
-                                             FLAGS.train_records * 20,
-                                             0.99,
-                                             staircase=True)
   # Optimizer.
-  optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
+  optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
   return optimizer, learning_rate
 
 
