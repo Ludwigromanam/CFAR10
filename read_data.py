@@ -56,10 +56,10 @@ def read_data(filename_queue):
     _, serialized_example = reader.read(filename_queue)
     features = tf.parse_single_example(
         serialized_example,
-        dense_keys=['image_raw', 'label'],
-        dense_types=[tf.string, tf.int64]
-        #features={'image_raw': tf.FixedLenFeature([], tf.string),
-        #          'label': tf.FixedLenFeature([], tf.int64)}
+        #dense_keys=['image_raw', 'label'],
+        #dense_types=[tf.string, tf.int64]
+        features={'image_raw': tf.FixedLenFeature([], tf.string),
+                  'label': tf.FixedLenFeature([], tf.int64)}
     )
     image = tf.decode_raw(features['image_raw'], tf.uint8)
     image.set_shape([FLAGS.input_image_size * FLAGS.input_image_size * FLAGS.input_image_channels])
