@@ -5,7 +5,7 @@ import matplotlib.image as mpimg
 import tensorflow as tf
 
 image_size = 24
-new_image_size = 48
+new_image_size = 72
 num_labels = 10
 num_channels = 3
 batch_size = 1
@@ -57,17 +57,17 @@ def run_model_image(image):
 
       saver = tf.train.Saver(tf.all_variables())
       sess = tf.Session()
-      saver.restore(sess=sess, save_path='t2model.ckpt')
+      saver.restore(sess=sess, save_path='basic_tmodel.ckpt')
       predictions = sess.run(train_prediction)
 
 
       return predictions
 
 
-#image = cv2.imread('/Users/pspitler3/Documents/caffe_images/dogsandcar.jpg')
+image = cv2.imread('/Users/pspitler3/Documents/caffe_images/dogandcat.jpg')
 #image = image[30:330, 90:390, :]
-#image = cv2.resize(image, (new_image_size, new_image_size), interpolation=cv2.INTER_AREA)
-#cv2.imwrite('/Users/pspitler3/Documents/caffe_images/dogsandcar_thumb.jpg', image)
+image = cv2.resize(image, (new_image_size, new_image_size), interpolation=cv2.INTER_AREA)
+cv2.imwrite('/Users/pspitler3/Documents/caffe_images/dogandcat_thumb.jpg', image)
 
 imdata = mpimg.imread('/Users/pspitler3/Documents/caffe_images/dogandcat_thumb.jpg')
 
