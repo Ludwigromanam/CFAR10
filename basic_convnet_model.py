@@ -106,7 +106,7 @@ def inference(train, images):
     conv = tf.nn.conv2d(norm, w2, [1, 1, 1, 1], padding='SAME')
     relu = tf.nn.relu(conv + b2)
     norm = tf.nn.lrn(relu, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
-    pool = tf.nn.max_pool(relu, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    pool = tf.nn.max_pool(norm, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
     hidden = tf.nn.relu(tf.nn.conv2d(pool, w3, [1, 1, 1, 1], padding='VALID') + b3)
     hidden2 = tf.nn.relu(tf.nn.conv2d(hidden, w4, [1, 1, 1, 1], padding='VALID') + b4)
     output = tf.nn.conv2d(hidden2, w5, [1, 1, 1, 1], padding='VALID') + b5
