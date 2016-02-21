@@ -71,23 +71,23 @@ def evaluate(test_set, path):
 
 def inference(train, images):
 
-  conv1_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, num_channels, depth1], stddev=0.1))
+  conv1_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, num_channels, depth1], stddev=1e-4))
   conv1_bias = tf.Variable(tf.zeros([depth1]))
-  conv2_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth1, depth1], stddev=0.1))
-  conv2_bias = tf.Variable(tf.constant(1.0, shape=[depth1]))
+  conv2_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth1, depth1], stddev=1e-4))
+  conv2_bias = tf.Variable(tf.constant(0.1, shape=[depth1]))
 
-  conv3_weight = tf.Variable(tf.truncated_normal([image_size/2, image_size/2, depth1, depth2], stddev=0.1))
-  conv3_bias = tf.Variable(tf.constant(1.0, shape=[depth2]))
-  conv4_weight = tf.Variable(tf.truncated_normal([image_size/2, image_size/2, depth2, depth2], stddev=0.1))
-  conv4_bias = tf.Variable(tf.constant(1.0, shape=[depth2]))
+  conv3_weight = tf.Variable(tf.truncated_normal([image_size/2, image_size/2, depth1, depth2], stddev=1e-4))
+  conv3_bias = tf.Variable(tf.constant(0.1, shape=[depth2]))
+  conv4_weight = tf.Variable(tf.truncated_normal([image_size/2, image_size/2, depth2, depth2], stddev=1e-4))
+  conv4_bias = tf.Variable(tf.constant(0.1, shape=[depth2]))
 
-  conv5_weight = tf.Variable(tf.truncated_normal([image_size/(2*2), image_size/(2*2), depth2, depth3], stddev=0.1))
-  conv5_bias = tf.Variable(tf.constant(1.0, shape=[1, 1, depth3]))
-  conv6_weight = tf.Variable(tf.truncated_normal([1, 1, depth3, depth4], stddev=0.1))
-  conv6_bias = tf.Variable(tf.constant(1.0, shape=[1, 1, depth4]))
+  conv5_weight = tf.Variable(tf.truncated_normal([image_size/(2*2), image_size/(2*2), depth2, depth3], stddev=1e-4))
+  conv5_bias = tf.Variable(tf.constant(0.1, shape=[1, 1, depth3]))
+  conv6_weight = tf.Variable(tf.truncated_normal([1, 1, depth3, depth4], stddev=1e-4))
+  conv6_bias = tf.Variable(tf.constant(0.1, shape=[1, 1, depth4]))
 
-  conv7_weight = tf.Variable(tf.truncated_normal([1, 1, depth4, num_labels], stddev=0.1))
-  conv7_bias = tf.Variable(tf.constant(1.0, shape=[1, 1, num_labels]))
+  conv7_weight = tf.Variable(tf.truncated_normal([1, 1, depth4, num_labels], stddev=1e-4))
+  conv7_bias = tf.Variable(tf.constant(0.0, shape=[1, 1, num_labels]))
 
   # Model.
   def train_model(data):
