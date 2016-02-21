@@ -72,11 +72,11 @@ def inference(train, images):
   b1 = tf.Variable(tf.zeros([depth]))
   w2 = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth, depth], stddev=1e-4))
   b2 = tf.Variable(tf.constant(0.1, shape=[depth]))
-  w3 = tf.Variable(tf.truncated_normal([IMAGE_SIZE/(2*2), IMAGE_SIZE/(2*2), depth, layer1], stddev=1e-4))
+  w3 = tf.Variable(tf.truncated_normal([IMAGE_SIZE/(2*2), IMAGE_SIZE/(2*2), depth, layer1], stddev=4e-2))
   b3 = tf.Variable(tf.constant(0.1, shape=[layer1]))
-  w4 = tf.Variable(tf.truncated_normal([1, 1, layer1, layer2], stddev=1e-2))
+  w4 = tf.Variable(tf.truncated_normal([1, 1, layer1, layer2], stddev=4e-2))
   b4 = tf.Variable(tf.constant(0.1, shape=[layer2]))
-  w5 = tf.Variable(tf.truncated_normal([1, 1, layer2, num_labels], stddev=1e-2))
+  w5 = tf.Variable(tf.truncated_normal([1, 1, layer2, num_labels], stddev=1/192.0))
   b5 = tf.Variable(tf.constant(0.0, shape=[num_labels]))
 
   # Model.
