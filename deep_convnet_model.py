@@ -81,12 +81,12 @@ def inference(train, images):
   conv4_weight = tf.Variable(tf.truncated_normal([image_size/2, image_size/2, depth2, depth2], stddev=1e-4))
   conv4_bias = tf.Variable(tf.constant(0.1, shape=[depth2]))
 
-  conv5_weight = tf.Variable(tf.truncated_normal([image_size/(2*2), image_size/(2*2), depth2, depth3], stddev=1e-4))
+  conv5_weight = tf.Variable(tf.truncated_normal([image_size/(2*2), image_size/(2*2), depth2, depth3], stddev=4e-2))
   conv5_bias = tf.Variable(tf.constant(0.1, shape=[1, 1, depth3]))
-  conv6_weight = tf.Variable(tf.truncated_normal([1, 1, depth3, depth4], stddev=1e-4))
+  conv6_weight = tf.Variable(tf.truncated_normal([1, 1, depth3, depth4], stddev=4e-2))
   conv6_bias = tf.Variable(tf.constant(0.1, shape=[1, 1, depth4]))
 
-  conv7_weight = tf.Variable(tf.truncated_normal([1, 1, depth4, num_labels], stddev=1e-4))
+  conv7_weight = tf.Variable(tf.truncated_normal([1, 1, depth4, num_labels], stddev=1/192.0))
   conv7_bias = tf.Variable(tf.constant(0.0, shape=[1, 1, num_labels]))
 
   # Model.
