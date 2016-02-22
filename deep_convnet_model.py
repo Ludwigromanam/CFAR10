@@ -199,14 +199,14 @@ def run_training(path):
       _, loss_value = sess.run([train_op, loss])
       duration = time.time() - start_time
 
-      if step % 225 == 0 or step == int((num_epochs * FLAGS.train_records)/FLAGS.batch_size):
+      if step % 10 == 0 or step == int((num_epochs * FLAGS.train_records)/FLAGS.batch_size):
         print "------------------------------------------"
         print "Examples/sec: ", FLAGS.batch_size/duration
         print "Sec/batch: ", float(duration)
         print "Current epoch: ", (float(step) * batch_size) / FLAGS.train_records
         print "Current learning rate: ", lr
         print "Minibatch loss at step", step, ":", loss_value
-      if step % 900 == 0 or step == int((num_epochs * FLAGS.train_records)/FLAGS.batch_size) - 1:
+      if step % 100 == 0 or step == int((num_epochs * FLAGS.train_records)/FLAGS.batch_size) - 1:
         save_path = saver.save(sess, path)
         print "Model saved in file: ", save_path
         print "Validation accuracy: ", evaluate('valid.tfrecords', path)
