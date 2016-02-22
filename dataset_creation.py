@@ -7,7 +7,7 @@ tf.app.flags.DEFINE_integer('input_image_size', 32, 'The size of the images in t
 tf.app.flags.DEFINE_integer('output_image_size', 24, 'The size of the cropped images for deep learning')
 tf.app.flags.DEFINE_integer('input_image_channels', 3, 'The depth of the images in the database')
 tf.app.flags.DEFINE_integer('num_labels', 10, 'The number of classes in the label file')
-tf.app.flags.DEFINE_integer('cross_valid', 0, 'The number of records to hold for cross-validation')
+tf.app.flags.DEFINE_integer('cross_valid', 5000, 'The number of records to hold for cross-validation')
 
 FLAGS = tf.app.flags.FLAGS
 
