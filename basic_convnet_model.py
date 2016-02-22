@@ -168,10 +168,9 @@ def run_training(path):
       if step % 900 == 0 or step == int((num_epochs * FLAGS.train_records)/FLAGS.batch_size) - 1:
         save_path = saver.save(sess, path)
         print "Model saved in file: ", save_path
-        print "Validation accuracy: ", evaluate('valid.tfrecords', path)
+        print "Validation accuracy: ", evaluate('test.tfrecords', path)
 
     print "===================================="
-    print "Validation accuracy: ", evaluate('valid.tfrecords', path)
     print "Test accuracy: ", evaluate('test.tfrecords', path)
 
 
