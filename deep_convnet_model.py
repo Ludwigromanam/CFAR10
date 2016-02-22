@@ -15,10 +15,10 @@ depth2 = 128
 depth3 = 384
 depth4 = 192
 
-conv_dprob = 0.8
-hidden_dprob = 0.7
+conv_dprob = 0.6
+hidden_dprob = 0.5
 
-#lr = 0.0005
+#lr = 0.000001
 #num_epochs = 350
 
 FLAGS = tf.app.flags.FLAGS
@@ -110,7 +110,7 @@ def inference(train, images):
     relu4 = tf.nn.relu(conv4 + conv4_bias)
     relu4_dropout = tf.nn.dropout(conv4, conv_dprob)
     print relu4.get_shape().as_list()
-    pool2 = tf.nn.max_pool(relu4_dropout, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    pool2 = tf.nn.max_pool(relu4_dropout, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
     print pool2.get_shape().as_list()
 
     hidden_conv1 = tf.nn.conv2d(pool2, conv5_weight, [1, 1, 1, 1], padding='VALID')
@@ -139,7 +139,7 @@ def inference(train, images):
     relu3 = tf.nn.relu(conv3 + conv3_bias)
     conv4 = tf.nn.conv2d(relu3, conv4_weight, [1, 1, 1, 1], padding='SAME')
     relu4 = tf.nn.relu(conv4 + conv4_bias)
-    pool2 = tf.nn.max_pool(relu4, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    pool2 = tf.nn.max_pool(relu4, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     hidden_conv1 = tf.nn.conv2d(pool2, conv5_weight, [1, 1, 1, 1], padding='VALID')
     hidden_relu1 = tf.nn.relu(hidden_conv1 + conv5_bias)
