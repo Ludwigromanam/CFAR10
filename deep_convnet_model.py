@@ -9,7 +9,7 @@ image_size = 24
 num_labels = 10
 num_channels = 3 # grayscale
 batch_size = 100
-patch_size = 3
+patch_size = 2
 depth1 = 64
 depth2 = 128
 depth3 = 384
@@ -76,16 +76,15 @@ def inference(train, images):
   conv2_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth1, depth1], stddev=1e-4))
   conv2_bias = tf.Variable(tf.constant(0.1, shape=[depth1]))
 
-  conv3_weight = tf.Variable(tf.truncated_normal([image_size/2, image_size/2, depth1, depth2], stddev=1e-4))
+  conv3_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth1, depth2], stddev=1e-4))
   conv3_bias = tf.Variable(tf.constant(0.1, shape=[depth2]))
-  conv4_weight = tf.Variable(tf.truncated_normal([image_size/2, image_size/2, depth2, depth2], stddev=1e-4))
+  conv4_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth2, depth2], stddev=1e-4))
   conv4_bias = tf.Variable(tf.constant(0.1, shape=[depth2]))
 
   conv5_weight = tf.Variable(tf.truncated_normal([image_size/(2*2), image_size/(2*2), depth2, depth3], stddev=4e-2))
   conv5_bias = tf.Variable(tf.constant(0.1, shape=[1, 1, depth3]))
   conv6_weight = tf.Variable(tf.truncated_normal([1, 1, depth3, depth4], stddev=4e-2))
   conv6_bias = tf.Variable(tf.constant(0.1, shape=[1, 1, depth4]))
-
   conv7_weight = tf.Variable(tf.truncated_normal([1, 1, depth4, num_labels], stddev=1/192.0))
   conv7_bias = tf.Variable(tf.constant(0.0, shape=[1, 1, num_labels]))
 
