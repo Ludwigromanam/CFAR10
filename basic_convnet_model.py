@@ -5,6 +5,13 @@ import os
 import argparse
 from read_data import distorted_inputs, inputs
 
+#Global variables
+num_labels = 10
+valid_records = 5000
+test_records = 10000
+train_records = 45000
+
+# Model variables
 patch_size = 5
 depth = 64
 layer1 = 384
@@ -17,8 +24,6 @@ num_channels = 3
 
 #lr = 0.025
 #num_epochs = 350
-
-FLAGS = tf.app.flags.FLAGS
 
 
 def accuracy(predictions, labels):
@@ -46,12 +51,12 @@ def evaluate(test_set, path):
       try:
         true_count = 0
         if test_set == 'valid.tfrecords':
-          num_records = FLAGS.valid_records
+          num_records = valid_records
         else:
-          num_records = FLAGS.test_records
+          num_records = test_records
 
         step = 0
-        while step < int(num_records/FLAGS.batch_size):
+        while step < int(num_records/batch_size):
           acc = sess.run(test_acc)
           true_count += np.sum(acc)
           step += 1
@@ -152,20 +157,20 @@ def run_training(path):
 
     tf.train.start_queue_runners(sess=sess)
 
-    for step in xrange(int((num_epochs * FLAGS.train_records)/FLAGS.batch_size)):
+    for step in xrange(int((num_epochs * train_records)/batch_size)):
 
       start_time = time.time()
       _, loss_value = sess.run([train_op, loss])
       duration = time.time() - start_time
 
-      if step % 225 == 0 or step == int((num_epochs * FLAGS.train_records)/FLAGS.batch_size):
+      if step % 225 == 0 or step == int((num_epochs * train_records)/batch_size):
         print "------------------------------------------"
-        print "Examples/sec: ", FLAGS.batch_size/duration
+        print "Examples/sec: ", batch_size/duration
         print "Sec/batch: ", float(duration)
-        print "Current epoch: ", (float(step) * batch_size) / FLAGS.train_records
+        print "Current epoch: ", (float(step) * batch_size) / train_records
         print "Current learning rate: ", lr
         print "Minibatch loss at step", step, ":", loss_value
-      if step % 900 == 0 or step == int((num_epochs * FLAGS.train_records)/FLAGS.batch_size) - 1:
+      if step % 900 == 0 or step == int((num_epochs * train_records)/batch_size) - 1:
         save_path = saver.save(sess, path)
         print "Model saved in file: ", save_path
         print "Validation accuracy: ", evaluate('valid.tfrecords', path)

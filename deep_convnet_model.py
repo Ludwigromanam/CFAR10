@@ -5,6 +5,13 @@ import os
 import argparse
 from read_data import distorted_inputs, inputs
 
+#Global variables
+num_labels = 10
+valid_records = 5000
+test_records = 10000
+train_records = 45000
+
+# Model variables
 image_size = 24
 num_labels = 10
 num_channels = 3 # grayscale
@@ -21,7 +28,6 @@ hidden_dprob = 0.7
 #lr = 0.000001
 #num_epochs = 350
 
-FLAGS = tf.app.flags.FLAGS
 
 
 def accuracy(predictions, labels):
@@ -49,12 +55,12 @@ def evaluate(test_set, path):
       try:
         true_count = 0
         if test_set == 'valid.tfrecords':
-          num_records = FLAGS.valid_records
+          num_records = valid_records
         else:
-          num_records = FLAGS.test_records
+          num_records = test_records
 
         step = 0
-        while step < int(num_records/FLAGS.batch_size):
+        while step < int(num_records/batch_size):
           acc = sess.run(test_acc)
           true_count += np.sum(acc)
           step += 1
@@ -92,35 +98,25 @@ def inference(train, images):
   def train_model(data):
     conv1 = tf.nn.conv2d(data, conv1_weight, [1, 1, 1, 1], padding='SAME')
     relu1 = tf.nn.relu(conv1 + conv1_bias)
-    print relu1.get_shape().as_list()
     conv2 = tf.nn.conv2d(relu1, conv2_weight, [1, 1, 1, 1], padding='SAME')
     relu2 = tf.nn.relu(conv2 + conv2_bias)
-    print relu2.get_shape().as_list()
     pool1 = tf.nn.max_pool(relu2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
-    print pool1.get_shape().as_list()
 
     conv3 = tf.nn.conv2d(pool1, conv3_weight, [1, 1, 1, 1], padding='SAME')
     relu3 = tf.nn.relu(conv3 + conv3_bias)
-    print relu3.get_shape().as_list()
     conv4 = tf.nn.conv2d(relu3, conv4_weight, [1, 1, 1, 1], padding='SAME')
     relu4 = tf.nn.relu(conv4 + conv4_bias)
-    print relu4.get_shape().as_list()
     pool2 = tf.nn.max_pool(relu4, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
-    print pool2.get_shape().as_list()
 
     hidden_conv1 = tf.nn.conv2d(pool2, conv5_weight, [1, 1, 1, 1], padding='VALID')
     hidden_relu1 = tf.nn.relu(hidden_conv1 + conv5_bias)
     hidden_relu1_dropout = tf.nn.dropout(hidden_relu1, hidden_dprob)
-    print hidden_relu1.get_shape().as_list()
     hidden_conv2 = tf.nn.conv2d(hidden_relu1_dropout, conv6_weight, [1, 1, 1, 1], padding='VALID')
     hidden_relu2 = tf.nn.relu(hidden_conv2 + conv6_bias)
     hidden_relu2_dropout = tf.nn.dropout(hidden_relu2, hidden_dprob)
-    print hidden_relu2.get_shape().as_list()
 
     output = tf.nn.conv2d(hidden_relu2_dropout, conv7_weight, [1, 1, 1, 1], padding='VALID')
-    print output.get_shape().as_list()
     output = tf.reshape(output + conv7_bias, [-1, num_labels])
-    print output.get_shape().as_list()
     return output
 
   def test_model(data):
@@ -188,20 +184,20 @@ def run_training(path):
 
     tf.train.start_queue_runners(sess=sess)
 
-    for step in xrange(int((num_epochs * FLAGS.train_records)/FLAGS.batch_size)):
+    for step in xrange(int((num_epochs * train_records)/batch_size)):
 
       start_time = time.time()
       _, loss_value = sess.run([train_op, loss])
       duration = time.time() - start_time
 
-      if step % 225 == 0 or step == int((num_epochs * FLAGS.train_records)/FLAGS.batch_size):
+      if step % 225 == 0 or step == int((num_epochs * train_records)/batch_size):
         print "------------------------------------------"
-        print "Examples/sec: ", FLAGS.batch_size/duration
+        print "Examples/sec: ", batch_size/duration
         print "Sec/batch: ", float(duration)
-        print "Current epoch: ", (float(step) * batch_size) / FLAGS.train_records
+        print "Current epoch: ", (float(step) * batch_size) / train_records
         print "Current learning rate: ", lr
         print "Minibatch loss at step", step, ":", loss_value
-      if step % 900 == 0 or step == int((num_epochs * FLAGS.train_records)/FLAGS.batch_size) - 1:
+      if step % 900 == 0 or step == int((num_epochs * train_records)/batch_size) - 1:
         save_path = saver.save(sess, path)
         print "Model saved in file: ", save_path
         print "Valid accuracy: ", evaluate('valid.tfrecords', path)
