@@ -143,7 +143,7 @@ def training(loss, learning_rate):
 def run_training(path):
   with tf.Graph().as_default():
 
-    train_images, train_labels = distorted_inputs(num_threads=50)
+    train_images, train_labels = distorted_inputs(num_threads=10)
 
     logits = inference(train=True, images=train_images)
     loss = calc_loss(logits, train_labels)
