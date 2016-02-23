@@ -16,9 +16,9 @@ image_size = 24
 num_labels = 10
 num_channels = 3 # grayscale
 batch_size = 100
-patch_size = 3
-depth1 = 64
-depth2 = 128
+patch_size = 4
+depth1 = 32
+depth2 = 64
 depth3 = 384
 depth4 = 192
 
@@ -101,7 +101,7 @@ def inference(train, images):
     conv2 = tf.nn.conv2d(relu1_dropout, conv2_weight, [1, 1, 1, 1], padding='SAME')
     relu2 = tf.nn.relu(conv2 + conv2_bias)
     relu2_dropout = tf.nn.dropout(relu2, conv_dprob)
-    pool1 = tf.nn.max_pool(relu2_dropout, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+    pool1 = tf.nn.max_pool(relu2_dropout, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     conv3 = tf.nn.conv2d(pool1, conv3_weight, [1, 1, 1, 1], padding='SAME')
     relu3 = tf.nn.relu(conv3 + conv3_bias)
@@ -109,7 +109,7 @@ def inference(train, images):
     conv4 = tf.nn.conv2d(relu3_dropout, conv4_weight, [1, 1, 1, 1], padding='SAME')
     relu4 = tf.nn.relu(conv4 + conv4_bias)
     relu4_dropout = tf.nn.dropout(relu4, conv_dprob)
-    pool2 = tf.nn.max_pool(relu4_dropout, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+    pool2 = tf.nn.max_pool(relu4_dropout, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     hidden_conv1 = tf.nn.conv2d(pool2, conv5_weight, [1, 1, 1, 1], padding='VALID')
     hidden_relu1 = tf.nn.relu(hidden_conv1 + conv5_bias)
