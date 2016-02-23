@@ -77,39 +77,39 @@ def evaluate(test_set, path):
 
 def inference(train, images):
 
-  l1conv1_weight = tf.Variable(tf.random_normal([patch_size, patch_size, num_channels, convdepth1],
-                                                   stddev=np.sqrt(2.0/(24*24*3))))
+  l1conv1_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, num_channels, convdepth1],
+                                                   stddev=0.2))
   l1conv1_bias = tf.Variable(tf.zeros([convdepth1]))
-  l1conv2_weight = tf.Variable(tf.random_normal([patch_size, patch_size, convdepth1, convdepth1],
-                                                   stddev=np.sqrt(2.0/(convdepth1))))
-  l1conv2_bias = tf.Variable(tf.constant(0.01, shape=[convdepth1]))
+  l1conv2_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, convdepth1, convdepth1],
+                                                   stddev=0.2))
+  l1conv2_bias = tf.Variable(tf.constant(0.1, shape=[convdepth1]))
 
-  l2conv1_weight = tf.Variable(tf.random_normal([patch_size, patch_size, convdepth1, convdepth2],
-                                                   stddev=np.sqrt(2.0/(convdepth1))))
-  l2conv1_bias = tf.Variable(tf.constant(0.01, shape=[convdepth2]))
-  l2conv2_weight = tf.Variable(tf.random_normal([patch_size, patch_size, convdepth2, convdepth2],
-                                                   stddev=np.sqrt(2.0/(convdepth2))))
-  l2conv2_bias = tf.Variable(tf.constant(0.01, shape=[convdepth2]))
+  l2conv1_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, convdepth1, convdepth2],
+                                                   stddev=0.2))
+  l2conv1_bias = tf.Variable(tf.constant(0.1, shape=[convdepth2]))
+  l2conv2_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, convdepth2, convdepth2],
+                                                   stddev=0.2))
+  l2conv2_bias = tf.Variable(tf.constant(0.1, shape=[convdepth2]))
 
-  l3conv1_weight = tf.Variable(tf.random_normal([patch_size, patch_size, convdepth2, convdepth3],
-                                                   stddev=np.sqrt(2.0/(convdepth2))))
-  l3conv1_bias = tf.Variable(tf.constant(0.01, shape=[convdepth3]))
-  l3conv2_weight = tf.Variable(tf.random_normal([patch_size, patch_size, convdepth3, convdepth3],
-                                                   stddev=np.sqrt(2.0/(convdepth3))))
-  l3conv2_bias = tf.Variable(tf.constant(0.01, shape=[convdepth3]))
-  l3conv3_weight = tf.Variable(tf.random_normal([patch_size, patch_size, convdepth3, convdepth3],
-                                                   stddev=np.sqrt(2.0/(convdepth3))))
-  l3conv3_bias = tf.Variable(tf.constant(0.01, shape=[convdepth3]))
-  l3conv4_weight = tf.Variable(tf.random_normal([patch_size, patch_size, convdepth3, convdepth3],
-                                                   stddev=np.sqrt(2.0/(convdepth3))))
-  l3conv4_bias = tf.Variable(tf.constant(0.01, shape=[convdepth3]))
+  l3conv1_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, convdepth2, convdepth3],
+                                                   stddev=0.2))
+  l3conv1_bias = tf.Variable(tf.constant(0.1, shape=[convdepth3]))
+  l3conv2_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, convdepth3, convdepth3],
+                                                   stddev=0.2))
+  l3conv2_bias = tf.Variable(tf.constant(0.1, shape=[convdepth3]))
+  l3conv3_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, convdepth3, convdepth3],
+                                                   stddev=0.2))
+  l3conv3_bias = tf.Variable(tf.constant(0.1, shape=[convdepth3]))
+  l3conv4_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, convdepth3, convdepth3],
+                                                   stddev=0.2))
+  l3conv4_bias = tf.Variable(tf.constant(0.1, shape=[convdepth3]))
 
-  fc1_weight = tf.Variable(tf.random_normal([image_size/(2*2*2), image_size/(2*2*2), convdepth3, fcdepth],
-                                               stddev=np.sqrt(2.0/(convdepth3))))
-  fc1_bias = tf.Variable(tf.constant(0.01, shape=[1, 1, fcdepth]))
-  fc2_weight = tf.Variable(tf.random_normal([1, 1, fcdepth, fcdepth], stddev=np.sqrt(2.0/(fcdepth))))
-  fc2_bias = tf.Variable(tf.constant(0.01, shape=[1, 1, fcdepth]))
-  out_weight = tf.Variable(tf.random_normal([1, 1, fcdepth, num_labels], stddev=np.sqrt(2.0/(fcdepth))))
+  fc1_weight = tf.Variable(tf.truncated_normal([image_size/(2*2*2), image_size/(2*2*2), convdepth3, fcdepth],
+                                               stddev=0.2))
+  fc1_bias = tf.Variable(tf.constant(0.1, shape=[1, 1, fcdepth]))
+  fc2_weight = tf.Variable(tf.truncated_normal([1, 1, fcdepth, fcdepth], stddev=0.2))
+  fc2_bias = tf.Variable(tf.constant(0.1, shape=[1, 1, fcdepth]))
+  out_weight = tf.Variable(tf.truncated_normal([1, 1, fcdepth, num_labels], stddev=0.2))
   out_bias = tf.Variable(tf.constant(0.0, shape=[1, 1, num_labels]))
 
   # Model.
