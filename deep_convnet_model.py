@@ -17,8 +17,8 @@ num_labels = 10
 num_channels = 3 # grayscale
 batch_size = 100
 patch_size = 2
-depth1 = 64
-depth2 = 128
+depth1 = 32
+depth2 = 64
 depth3 = 384
 depth4 = 192
 
@@ -27,7 +27,6 @@ hidden_dprob = 0.7
 
 #lr = 0.000001
 #num_epochs = 350
-
 
 
 def accuracy(predictions, labels):
@@ -77,46 +76,56 @@ def evaluate(test_set, path):
 
 def inference(train, images):
 
-  conv1_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, num_channels, depth1], stddev=1e-6))
+  conv1_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, num_channels, depth1], stddev=0.1))
   conv1_bias = tf.Variable(tf.zeros([depth1]))
-  conv2_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth1, depth1], stddev=1e-6))
-  conv2_bias = tf.Variable(tf.constant(0.01, shape=[depth1]))
+  conv2_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth1, depth1], stddev=0.1))
+  conv2_bias = tf.Variable(tf.constant(0.1, shape=[depth1]))
 
-  conv3_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth1, depth2], stddev=1e-6))
-  conv3_bias = tf.Variable(tf.constant(0.01, shape=[depth2]))
-  conv4_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth2, depth2], stddev=1e-6))
-  conv4_bias = tf.Variable(tf.constant(0.01, shape=[depth2]))
+  conv3_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth1, depth2], stddev=0.1))
+  conv3_bias = tf.Variable(tf.constant(0.1, shape=[depth2]))
+  conv4_weight = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth2, depth2], stddev=0.1))
+  conv4_bias = tf.Variable(tf.constant(0.1, shape=[depth2]))
 
-  conv5_weight = tf.Variable(tf.truncated_normal([image_size/(2*2), image_size/(2*2), depth2, depth3], stddev=4e-4))
-  conv5_bias = tf.Variable(tf.constant(0.01, shape=[1, 1, depth3]))
-  conv6_weight = tf.Variable(tf.truncated_normal([1, 1, depth3, depth4], stddev=4e-4))
-  conv6_bias = tf.Variable(tf.constant(0.01, shape=[1, 1, depth4]))
-  conv7_weight = tf.Variable(tf.truncated_normal([1, 1, depth4, num_labels], stddev=1/192.0))
+  conv5_weight = tf.Variable(tf.truncated_normal([image_size/(2*2), image_size/(2*2), depth2, depth3], stddev=0.1))
+  conv5_bias = tf.Variable(tf.constant(0.1, shape=[1, 1, depth3]))
+  conv6_weight = tf.Variable(tf.truncated_normal([1, 1, depth3, depth4], stddev=0.1))
+  conv6_bias = tf.Variable(tf.constant(0.1, shape=[1, 1, depth4]))
+  conv7_weight = tf.Variable(tf.truncated_normal([1, 1, depth4, num_labels], stddev=0.1))
   conv7_bias = tf.Variable(tf.constant(0.0, shape=[1, 1, num_labels]))
 
   # Model.
   def train_model(data):
     conv1 = tf.nn.conv2d(data, conv1_weight, [1, 1, 1, 1], padding='SAME')
     relu1 = tf.nn.relu(conv1 + conv1_bias)
+    print relu1.get_shape().as_list
     conv2 = tf.nn.conv2d(relu1, conv2_weight, [1, 1, 1, 1], padding='SAME')
     relu2 = tf.nn.relu(conv2 + conv2_bias)
+    print relu2.get_shape().as_list
     pool1 = tf.nn.max_pool(relu2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+    print pool1.get_shape().as_list
 
     conv3 = tf.nn.conv2d(pool1, conv3_weight, [1, 1, 1, 1], padding='SAME')
     relu3 = tf.nn.relu(conv3 + conv3_bias)
+    print relu3.get_shape().as_list
     conv4 = tf.nn.conv2d(relu3, conv4_weight, [1, 1, 1, 1], padding='SAME')
     relu4 = tf.nn.relu(conv4 + conv4_bias)
+    print relu4.get_shape().as_list
     pool2 = tf.nn.max_pool(relu4, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+    print pool2.get_shape().as_list
 
     hidden_conv1 = tf.nn.conv2d(pool2, conv5_weight, [1, 1, 1, 1], padding='VALID')
     hidden_relu1 = tf.nn.relu(hidden_conv1 + conv5_bias)
     hidden_relu1_dropout = tf.nn.dropout(hidden_relu1, hidden_dprob)
+    print hidden_relu1_dropout.get_shape().as_list
     hidden_conv2 = tf.nn.conv2d(hidden_relu1_dropout, conv6_weight, [1, 1, 1, 1], padding='VALID')
     hidden_relu2 = tf.nn.relu(hidden_conv2 + conv6_bias)
     hidden_relu2_dropout = tf.nn.dropout(hidden_relu2, hidden_dprob)
+    print hidden_relu2_dropout.get_shape().as_list
 
     output = tf.nn.conv2d(hidden_relu2_dropout, conv7_weight, [1, 1, 1, 1], padding='VALID')
+    print output.get_shape().as_list
     output = tf.reshape(output + conv7_bias, [-1, num_labels])
+    print output.get_shape().as_list
     return output
 
   def test_model(data):
@@ -157,7 +166,7 @@ def calc_loss(logits, labels):
 def training(loss, learning_rate):
   # Optimizer.
   optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
-  return optimizer, learning_rate
+  return optimizer
 
 
 def run_training(path):
@@ -167,10 +176,9 @@ def run_training(path):
 
     logits = inference(train=True, images=train_images)
     loss = calc_loss(logits, train_labels)
-    train_op, curr_lr = training(loss, learning_rate=lr)
+    train_op = training(loss, learning_rate=lr)
 
     saver = tf.train.Saver(tf.all_variables())
-
     init_op = tf.initialize_all_variables()
 
     sess = tf.Session()
@@ -200,7 +208,7 @@ def run_training(path):
       if step % 900 == 0 or step == int((num_epochs * train_records)/batch_size) - 1:
         save_path = saver.save(sess, path)
         print "Model saved in file: ", save_path
-        print "Valid accuracy: ", evaluate('valid.tfrecords', path)
+        print "Validation accuracy: ", evaluate('valid.tfrecords', path)
 
     print "===================================="
     print "Test accuracy: ", evaluate('test.tfrecords', path)

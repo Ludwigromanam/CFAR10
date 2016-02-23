@@ -75,8 +75,10 @@ def inference(train, images):
   # Variables.
   w1 = tf.Variable(tf.truncated_normal([patch_size, patch_size, num_channels, depth], stddev=1e-4))
   b1 = tf.Variable(tf.zeros([depth]))
+
   w2 = tf.Variable(tf.truncated_normal([patch_size, patch_size, depth, depth], stddev=1e-4))
   b2 = tf.Variable(tf.constant(0.1, shape=[depth]))
+
   w3 = tf.Variable(tf.truncated_normal([IMAGE_SIZE/(2*2), IMAGE_SIZE/(2*2), depth, layer1], stddev=4e-2))
   b3 = tf.Variable(tf.constant(0.1, shape=[layer1]))
   w4 = tf.Variable(tf.truncated_normal([1, 1, layer1, layer2], stddev=4e-2))
@@ -89,11 +91,13 @@ def inference(train, images):
     conv = tf.nn.conv2d(data, w1, [1, 1, 1, 1], padding='SAME')
     relu = tf.nn.relu(conv + b1)
     pool = tf.nn.max_pool(relu, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+
     norm = tf.nn.lrn(pool, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
     conv = tf.nn.conv2d(norm, w2, [1, 1, 1, 1], padding='SAME')
     relu = tf.nn.relu(conv + b2)
     norm = tf.nn.lrn(relu, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
     pool = tf.nn.max_pool(norm, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+
     hidden = tf.nn.relu(tf.nn.conv2d(pool, w3, [1, 1, 1, 1], padding='VALID') + b3)
     hidden_dropout = tf.nn.dropout(hidden, hidden_dprob)
     hidden2 = tf.nn.relu(tf.nn.conv2d(hidden_dropout, w4, [1, 1, 1, 1], padding='VALID') + b4)
@@ -105,11 +109,13 @@ def inference(train, images):
     conv = tf.nn.conv2d(data, w1, [1, 1, 1, 1], padding='SAME')
     relu = tf.nn.relu(conv + b1)
     pool = tf.nn.max_pool(relu, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+
     norm = tf.nn.lrn(pool, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
     conv = tf.nn.conv2d(norm, w2, [1, 1, 1, 1], padding='SAME')
     relu = tf.nn.relu(conv + b2)
     norm = tf.nn.lrn(relu, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
     pool = tf.nn.max_pool(norm, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+
     hidden = tf.nn.relu(tf.nn.conv2d(pool, w3, [1, 1, 1, 1], padding='VALID') + b3)
     hidden2 = tf.nn.relu(tf.nn.conv2d(hidden, w4, [1, 1, 1, 1], padding='VALID') + b4)
     output = tf.nn.conv2d(hidden2, w5, [1, 1, 1, 1], padding='VALID') + b5
