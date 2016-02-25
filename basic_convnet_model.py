@@ -18,7 +18,6 @@ layer1 = 384
 layer2 = 192
 hidden_dprob = 0.7
 IMAGE_SIZE = 24
-num_labels = 10
 batch_size = 100
 num_channels = 3
 

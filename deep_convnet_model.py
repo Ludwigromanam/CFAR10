@@ -13,7 +13,6 @@ train_records = 45000
 
 # Model variables
 image_size = 24
-num_labels = 10
 num_channels = 3
 batch_size = 100
 patch_size = 3
