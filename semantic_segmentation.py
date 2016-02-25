@@ -1,17 +1,16 @@
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
 import tensorflow as tf
 from datetime import datetime
 from time import time
 
-new_image_size = 78
+new_image_size = 72
 
 # Model variables
 image_size = 24
 num_labels = 10
-num_channels = 3 # grayscale
+num_channels = 3
 batch_size = 1
 patch_size = 3
 convdepth1 = 64
@@ -80,12 +79,12 @@ def inference(images):
   l3relu4 = tf.nn.relu(l3conv4 + l3conv4_bias)
   l3pool = tf.nn.max_pool(l3relu4, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
-  fcconv1 = tf.nn.conv2d(l3pool, fc1_weight, [1, 1, 1, 1], padding='VALID')
+  fcconv1 = tf.nn.conv2d(l3pool, fc1_weight, [1, 1, 1, 1], padding='SAME')
   fcrelu1 = tf.nn.relu(fcconv1 + fc1_bias)
-  fcconv2 = tf.nn.conv2d(fcrelu1, fc2_weight, [1, 1, 1, 1], padding='VALID')
+  fcconv2 = tf.nn.conv2d(fcrelu1, fc2_weight, [1, 1, 1, 1], padding='SAME')
   fcrelu2 = tf.nn.relu(fcconv2 + fc2_bias)
 
-  output = tf.nn.conv2d(fcrelu2, out_weight, [1, 1, 1, 1], padding='VALID') + out_bias
+  output = tf.nn.conv2d(fcrelu2, out_weight, [1, 1, 1, 1], padding='SAME') + out_bias
   scaled_up_preds = tf.image.resize_images(output, new_image_size, new_image_size)
   logits = tf.reshape(scaled_up_preds, [-1, num_labels])
 
@@ -112,26 +111,15 @@ def run_model_image(image):
 
 
 image = cv2.imread('/Users/pspitler3/Documents/caffe_images/dogandcat.jpg')
-#image = image[30:330, 90:390, :]
+# image = image[40:320, :, :]
 image = cv2.resize(image, (new_image_size, new_image_size), interpolation=cv2.INTER_AREA)
-cv2.imwrite('/Users/pspitler3/Documents/caffe_images/dogandcat_thumb.jpg', image)
-
-imdata = mpimg.imread('/Users/pspitler3/Documents/caffe_images/dogandcat_thumb.jpg')
-
-# train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels = get_cfar10_data()
-# imdata = train_dataset[2, :, :, :]
-# imdata = np.reshape(imdata, (image_size, image_size, 3))
-# label = train_labels[2, :]
+imdata = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
 t = datetime.fromtimestamp(time(), None)
-print t
-
 
 in_imdata = imdata.reshape((1, new_image_size, new_image_size, 3))
-print np.shape(in_imdata)
 
 heatmap = run_model_image(image=in_imdata)
-print np.shape(heatmap)
 
 heatmap = heatmap.reshape(new_image_size, new_image_size, num_labels)
 print np.min(heatmap)

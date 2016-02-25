@@ -13,9 +13,9 @@ FLAGS = tf.app.flags.FLAGS
 
 
 def extract(filename):
-  tar = tarfile.open(filename)
-  tar.extractall('./data/')
-  tar.close()
+    tar = tarfile.open(filename)
+    tar.extractall('./data/')
+    tar.close()
 
 
 def unpickle(file):
@@ -82,11 +82,11 @@ def create_cfar10_data():
     print np.bincount(test_labels)
 
     def reformat(dataset, labels):
-      rgb = dataset.reshape(-1, FLAGS.input_image_channels, FLAGS.input_image_size * FLAGS.input_image_size)
-      rgb = rgb.reshape(-1, FLAGS.input_image_channels, FLAGS.input_image_size, FLAGS.input_image_size)
-      dataset = rgb.swapaxes(3, 1).swapaxes(1, 2)
-      # labels = (np.arange(FLAGS.num_labels) == labels[:, None]).astype(np.int32)
-      return dataset, labels
+        rgb = dataset.reshape(-1, FLAGS.input_image_channels, FLAGS.input_image_size * FLAGS.input_image_size)
+        rgb = rgb.reshape(-1, FLAGS.input_image_channels, FLAGS.input_image_size, FLAGS.input_image_size)
+        dataset = rgb.swapaxes(3, 1).swapaxes(1, 2)
+        # labels = (np.arange(FLAGS.num_labels) == labels[:, None]).astype(np.int32)
+        return dataset, labels
 
     train_dataset, train_labels = reformat(train_dataset, train_labels)
     valid_dataset, valid_labels = reformat(valid_dataset, valid_labels)
