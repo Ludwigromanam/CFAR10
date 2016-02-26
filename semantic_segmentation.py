@@ -5,7 +5,7 @@ import tensorflow as tf
 from datetime import datetime
 from time import time
 
-new_image_size = 72
+new_image_size = 74
 
 # Model variables
 image_size = 24
@@ -120,11 +120,11 @@ in_imdata = imdata.reshape((1, new_image_size, new_image_size, 3))
 
 heatmap = run_model_image(image=in_imdata)
 
+print datetime.fromtimestamp(time(), None) - t
+
 heatmap = heatmap.reshape(new_image_size, new_image_size, num_labels)
 print np.min(heatmap)
 print np.max(heatmap)
-
-print datetime.fromtimestamp(time(), None) - t
 
 fig, ax = plt.subplots(3, 4)
 ax[0, 0].imshow(imdata)
