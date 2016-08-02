@@ -3,6 +3,7 @@ import cPickle as pickle
 import tarfile
 import tensorflow as tf
 
+# Define global tensorflow variables and assign to FLAGS
 tf.app.flags.DEFINE_integer('input_image_size', 32, 'The size of the images in the database')
 tf.app.flags.DEFINE_integer('output_image_size', 24, 'The size of the cropped images for deep learning')
 tf.app.flags.DEFINE_integer('input_image_channels', 3, 'The depth of the images in the database')
@@ -26,6 +27,13 @@ def unpickle(file):
 
 
 def randomize(dataset, labels):
+    """
+    Function to create a random split of the supplied data and labels. Used so that slices of the data will
+    not be biased towards one class.
+    :param dataset: Supplied image data where the first dimension is the image
+    :param labels: The label of the image (same length as first dimension of dataset)
+    :return: Shuffled datasets and labels
+    """
     permutation = np.random.permutation(labels.shape[0])
     shuffled_dataset = dataset[permutation, :]
     shuffled_labels = labels[permutation]
@@ -33,6 +41,13 @@ def randomize(dataset, labels):
 
 
 def tensorflow_conversion(images, labels, name):
+    """
+    Convert a numpy array to tensorflow binary format. It helps speed up reading data for training.
+    :param images: image numpy array
+    :param labels: label list
+    :param name: naming convention for the file
+    :return: Writes a binary file to be consumed by the read_data.py file
+    """
     num_examples = labels.shape[0]
     filename = name + '.tfrecords'
     print 'Writing', filename
@@ -47,6 +62,7 @@ def tensorflow_conversion(images, labels, name):
 
 
 def create_cfar10_data():
+    # Extract, load and combine the raw CIFAR data.
     extract('./cifar-10-python.tar.gz')
     batch1 = unpickle('data/cifar-10-batches-py/data_batch_1')
     batch2 = unpickle('data/cifar-10-batches-py/data_batch_2')
@@ -63,6 +79,7 @@ def create_cfar10_data():
     test_dataset = test_batch['data']
     test_labels = np.reshape(np.array(test_batch['labels']), (np.shape(test_dataset)[0],))
 
+    # Randomize the data and then split the main dataset to train and validation datasets.
     main_dataset, main_labels = randomize(main_dataset, main_labels)
     test_dataset, test_labels = randomize(test_dataset, test_labels)
 
@@ -72,6 +89,7 @@ def create_cfar10_data():
     train_labels = main_labels[:len(main_labels) - FLAGS.cross_valid]
     valid_labels = main_labels[len(main_labels) - FLAGS.cross_valid:]
 
+    # Observe the data splits to make sure there isnt bias in the number of records
     print np.unique(valid_labels)
     print np.bincount(valid_labels)
 
@@ -81,6 +99,7 @@ def create_cfar10_data():
     print np.unique(test_labels)
     print np.bincount(test_labels)
 
+    # The CIFAR data has a weird format... Need to make it RGB based images
     def reformat(dataset, labels):
         rgb = dataset.reshape(-1, FLAGS.input_image_channels, FLAGS.input_image_size * FLAGS.input_image_size)
         rgb = rgb.reshape(-1, FLAGS.input_image_channels, FLAGS.input_image_size, FLAGS.input_image_size)
@@ -101,6 +120,7 @@ def create_cfar10_data():
     print "Test Dataset Dimensions:"
     print np.shape(test_dataset), np.shape(test_labels)
 
+    # Convert and save the data in tensorflow format
     tensorflow_conversion(train_dataset, train_labels, 'train')
     tensorflow_conversion(valid_dataset, valid_labels, 'valid')
     tensorflow_conversion(test_dataset, test_labels, 'test')
